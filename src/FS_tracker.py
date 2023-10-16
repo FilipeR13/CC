@@ -1,5 +1,5 @@
 import socket
-
+import threading
 
 class fs_tracker():
 
@@ -9,17 +9,30 @@ class fs_tracker():
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
+        self.node_threads = {}
+
+    def handle_client(self, socket_node):
+        while True:
+            data = socket_node.recv(1024)
+            if not data:
+                break
+            print(f"Data recebida pela porta {socket_node.getpeername()[1] }: {data.decode()}")
+        socket_node.close()
 
     def start_connections(self):
-        print("Servidor ativo em " + self.host + " porta " + str(self.port))
+        print(f"Servidor ativo em {self.host} porta {self.port}")
         while True:
-            client_socket, client_address = self.server_socket.accept()
-            data = client_socket.recv(1024)
-            print(data.decode())
+            socket_node, address_node = self.server_socket.accept() #função accept retorna um tuplo.
+
+            host_node, porta_node = socket_node.getpeername()
+            print(f"Node conectado a partir de {host_node} na porta {porta_node}")
+
+
+            thread_node = threading.Thread(target=self.handle_client, args=(socket_node,))
+            self.node_threads[porta_node] = thread_node
+            thread_node.start()
 
 
 if __name__ == "__main__":
     tracker = fs_tracker()
     tracker.start_connections()
-
-
