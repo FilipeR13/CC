@@ -17,12 +17,13 @@ class fs_tracker():
             data = socket_node.recv(1024)
             if not data:
                 break
-            if data.decode()  == "Current nodes":
+            data_decoded = data.decode()
+            if data_decoded  == "Current nodes":
                 print("Lista de nodes atualmente conectados:")
                 for port, node in self.nodes.items():
                     print("[" + f"Porta -> {node['port']}" + "," + f"Host -> {node['host']}" + "]")
             else:
-                print(f"Data recebida pela porta {socket_node.getpeername()[1] }: {data.decode()}")
+                print(f"Data recebida pela porta {socket_node.getpeername()[1] }: {data_decoded}")
         socket_node.close()
 
     def start_connections(self):
