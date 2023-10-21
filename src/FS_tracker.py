@@ -1,6 +1,6 @@
 import socket
 import threading
-
+import sys
 class fs_tracker():
 
     def __init__(self):
@@ -28,22 +28,26 @@ class fs_tracker():
 
     def start_connections(self):
         print(f"Servidor ativo em {self.host} porta {self.port}")
-        while True:
-            socket_node, address_node = self.server_socket.accept() #função accept retorna um tuplo.
+        try:
+            while True:
+                socket_node, address_node = self.server_socket.accept() #função accept retorna um tuplo.
 
-            host_node, porta_node = socket_node.getpeername()
-            print(f"Node conectado a partir de {host_node} na porta {porta_node}")
+                host_node, porta_node = socket_node.getpeername()
+                print(f"Node conectado a partir de {host_node} na porta {porta_node}")
 
 
-            thread_node = threading.Thread(target=self.handle_client, args=(socket_node,))
-            self.node_threads[porta_node] = thread_node
-            thread_node.start()
+                thread_node = threading.Thread(target=self.handle_client, args=(socket_node,))
+                self.node_threads[porta_node] = thread_node
+                thread_node.start()
 
-            self.nodes[porta_node] = {
-                'host': host_node,
-                'port': porta_node
-            }
-
+                self.nodes[porta_node] = {
+                    'host': host_node,
+                    'port': porta_node
+                }
+        except KeyboardInterrupt:
+            print("Keyboard Interrupt")
+            self.server_socket.close()
+            sys.exit(0)
 
 if __name__ == "__main__":
     tracker = fs_tracker()

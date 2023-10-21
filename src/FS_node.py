@@ -17,11 +17,15 @@ def main():
     if len(sys.argv) != 4:
         print("Erro nos argumentos: FS_node.py <message> <host> <port>")
     node = fs_node(sys.argv[2],sys.argv[3])
-    while True:
-        user_input = input("Enter a message: ")
-        if user_input:
-            node.send_data(user_input)
-
+    try:
+        while True:
+            user_input = input("Enter a message: ")
+            if user_input:
+                node.send_data(user_input)
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
+        node.client_socket.close()
+        sys.exit(0)
 
 
 
