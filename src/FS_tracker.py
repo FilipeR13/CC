@@ -1,5 +1,6 @@
 import socket
 import threading
+import struct
 import sys
 class fs_tracker():
 
@@ -23,7 +24,8 @@ class fs_tracker():
                 for port, node in self.nodes.items():
                     print("[" + f"Porta -> {node['port']}" + "," + f"Host -> {node['host']}" + "]")
             else:
-                print(f"Data recebida pela porta {socket_node.getpeername()[1] }: {data_decoded}")
+                length, message_type, payload = struct.unpack(f'!IB{len(data) - 5}s', data)
+                print(f"Data recebida pela porta {socket_node.getpeername()[1] }: {length} || {message_type} || {payload}")
         socket_node.close()
 
     def start_connections(self):
