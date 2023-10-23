@@ -1,39 +1,29 @@
 import struct
-# Define message types
-REQUEST = 0x01
-RESPONSE = 0x02
-DATA = 0x03
 
 # Define message flags
-ACK = 0x01
-SYN = 0x02
-ACK_SYN = 0x03
-FIN = 0x04
+WAKE_UP = 0x01
+REQUEST = 0x02
+RESPONSE = 0x03
 
-
+#normalmente format_message vai ser '!IBB' mas para ficheiros é '!IB{total_length}s'
 class Message:
-    def create_struct_message(message_type, message_subtype, payload = b''):
+    def __init__ (self, message_type, payload, format_message = '!IB'):
+        self.message_type = message_type
+        self.payload = payload
+        self.format_message = format_message
+
+    def create_struct_message(self):
         # Pack message header
-        header = struct.pack('!IB', len(payload) + 5, message_type << 4 | message_subtype)
-        return header + payload
-    
+        packet = struct.pack(self.format_message, len(self.payload), self.message_type, self.payload)
+        print(packet, len(packet))
+        return packet
+   
+    '''
     def unpack_header(struct_message):
         # Unpack message header
-        length, message_type_subtype = struct.unpack('!IB', struct_message[:5])
+        length, message_type, payload = struct.unpack('!IB', struct_message[:5])
         # Extract message type and subtype
-        message_type = message_type_subtype >> 4
-        message_subtype = message_type_subtype & 0x0F
 
-        return message_type, message_subtype, length - 2
+        return message_type, length, payload
 
-
-# socket.send (Message.create_struct_message (0x01,0x02, "Hello World"))
-# message_type,message_subtype, length =  Message.unpack_header (socket.recv (5))
-
-# Verificar header types
-# Verificar se o payload é maior que 0
-# Verificar se o payload é do tipo bytes
-# Verificar se o message type é um dos 3 definidos
-# Verificar se o message subtype é um dos 4 definidos
-# Verificar se o message type e subtype são válidos
-# socket.recv (length)
+    '''
