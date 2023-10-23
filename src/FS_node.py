@@ -41,7 +41,7 @@ def main():
     node.send_name_files()
     try:
         while True:
-            user_input = input("Enter a message: ")
+            user_input = input("> ")
             if user_input:
                 node.send_data(user_input)
     except KeyboardInterrupt:
