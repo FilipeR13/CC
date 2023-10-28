@@ -5,13 +5,18 @@ WAKE_UP = 0x01
 REQUEST = 0x02
 RESPONSE = 0x03
 
+PACKET_SIZE = 1024
+
 #normalmente format_message vai ser '!IBB' mas para ficheiros é '!IB{total_length}s'
+# temos de adicionar o numero de segmento.
 class Message:
     def __init__ (self, message_type, payload, format_message = '!IB'):
         self.message_type = message_type
         self.payload = payload
         self.format_message = format_message
 
+# quando criarmos a struct, podemos calcular o numero de segmentos que vamos ter de enviar (ex: len(payload)/1024 (mais 5 bytes para cada header))
+# dps devolvemos uma lista com os segmentos(structs)
     def create_struct_message(self):
         # Pack message header
         packet = struct.pack(self.format_message, len(self.payload), self.message_type, self.payload)

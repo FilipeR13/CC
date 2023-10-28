@@ -2,6 +2,7 @@ import socket
 import threading
 import struct
 import sys
+from Data import *
 class fs_tracker():
 
     def __init__(self):
@@ -26,17 +27,26 @@ class fs_tracker():
         print("Response")
         print(payload)
 
+    def close_client(self, socket_node):
+        print(f"Node {socket_node.getpeername()[1]} desconectado")
+        del self.node_threads[socket_node.getpeername()[1]]
+        del self.nodes[socket_node.getpeername()[1]]
+        socket_node.close()
+
+
     def handle_client(self, socket_node):
         handle_flags =  {
-            0x01: self.handle_wake_up,
-            0x02: self.handle_request,
-            0x03: self.handle_response
+            WAKE_UP: self.handle_wake_up,
+            REQUEST: self.handle_request,
+            RESPONSE: self.handle_response
         }
+
         while True:
-            data = socket_node.recv(1024)
+            data = socket_node.recv(PACKET_SIZE)
             if not data:
                 break
             data_decoded = data.decode()
+
             if data_decoded  == "Current nodes":
                 print("Lista de nodes atualmente conectados:")
                 for port, node in self.nodes.items():
@@ -45,10 +55,9 @@ class fs_tracker():
                 length, message_type, payload = struct.unpack(f'!IB{len(data) - 5}s', data)
                 print(f"Data recebida pela porta {socket_node.getpeername()[1] }: {length} || {message_type} || {payload}")
                 handle_flags[message_type](socket_node, payload)
-        print(f"Node {socket_node.getpeername()[1]} desconectado")
-        del self.node_threads[socket_node.getpeername()[1]]
-        del self.nodes[socket_node.getpeername()[1]]
-        socket_node.close()
+
+        self.close_client(socket_node)
+
 
     def start_connections(self):
         print(f"Servidor ativo em {self.host} porta {self.port}")
@@ -58,7 +67,6 @@ class fs_tracker():
 
                 host_node, porta_node = socket_node.getpeername()
                 print(f"Node conectado a partir de {host_node} na porta {porta_node}")
-
 
                 thread_node = threading.Thread(target=self.handle_client, args=(socket_node,))
                 self.node_threads[porta_node] = thread_node

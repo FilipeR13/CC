@@ -53,5 +53,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # Ver multithreading em tcp: a porta do server recebe um pedido do cliente e depois cria uma nova thread que criará uma nova porta exclusiva para esse cliente.
-    # Assim podemos evitar que quando um cliente esteja a utilizar a porta do server os outros tenham de ficar à espera.
