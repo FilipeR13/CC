@@ -7,7 +7,7 @@ class fs_tracker():
 
     def __init__(self):
         self.host = 'localhost'
-        self.port = 9090
+        self.port = 9091
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
@@ -29,13 +29,18 @@ class fs_tracker():
         self.nodes[socket_node.getpeername()[1]]['files'] = files
 
     def handle_order(self, socket_node, payload):
-        print("Request")
-        print(payload)
+        result = []
+        file = payload.decode('utf-8')
+        for key, value in self.nodes.items():
+            if key != socket_node.getpeername()[1]:
+                if file in value['files']:
+                    result.append(key)
+        self.handle_ship(socket_node, result)
 
     
     def handle_ship(self, socket_node, payload):
-        print("Response")
-        print(payload)
+        nodes = [node.to_bytes(4,"big") for node in payload]
+        socket_node.send(Message.create_message(SHIP, b' '.join(nodes)))
 
     def close_client(self, socket_node):
         print(f"Node {socket_node.getpeername()[1]} desconectado")
@@ -52,21 +57,9 @@ class fs_tracker():
         }
 
         while True:
-            data = socket_node.recv(PACKET_SIZE)
-            if not data:
+            message_type, payload = Message.receive_message(socket_node)
+            if not payload:
                 break
-            message_type, length, payload = data[0], data[1:5], data[5:]
-            int_length = int.from_bytes(length, "big")
-            if int_length > PACKET_SIZE - 5:
-                while True:
-                    data = socket_node.recv(PACKET_SIZE)
-                    if not data:
-                        break
-                    payload += data
-                    if len(payload) == int_length:
-                        break
-                
-            print(f"Data recebida pela porta {socket_node.getpeername()[1]}: {length} || {message_type} || {payload}")
             handle_flags[message_type](socket_node, payload)
 
         self.close_client(socket_node)
@@ -82,12 +75,12 @@ class fs_tracker():
 
                 thread_node = threading.Thread(target=self.handle_client, args=(socket_node,))
                 self.node_threads[porta_node] = thread_node
-                thread_node.start()
-
                 self.nodes[porta_node] = {
                     'host': host_node,
                     'files': []
                 }
+                
+                thread_node.start()
                 
         except KeyboardInterrupt:
             print("Keyboard Interrupt")

@@ -26,6 +26,25 @@ class fs_node():
         # Pack the list of encoded strings into a struct
         packet = Message.create_message(STORAGE, b' '.join(files))
         self.client_socket.send(packet)
+
+    def handle_order(self, payload):
+        self.client_socket.send(Message.create_message(ORDER, payload[0].encode('utf-8')))
+        message_type, payload = Message.receive_message(self.client_socket)
+
+    def handle_quit(self, payload):
+        self.client_socket.close()
+        sys.exit(0)
+    
+    def handle_input(self,input):
+        inputs = {
+            'order' : self.handle_order,
+            'quit' : self.handle_quit
+        }
+        command = input.split(' ')
+        if (command[0] not in inputs):
+            print("Comando inválido")
+            return
+        inputs[command[0]](command[1:])
     
 def main():
     if len(sys.argv) != 4:
@@ -38,7 +57,7 @@ def main():
         while True:
             user_input = input("> ")
             if user_input:
-                node.send_data(user_input)
+                node.handle_input(user_input)
     except KeyboardInterrupt:
         print("Keyboard Interrupt")
         node.client_socket.close()
