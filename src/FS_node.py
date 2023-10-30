@@ -24,13 +24,8 @@ class fs_node():
         print (total_length)
 
         # Pack the list of encoded strings into a struct
-        packet = Message(STORAGE, b' '.join(files), f'!IB{total_length}s').create_struct_message()
+        packet = Message.create_message(STORAGE, b' '.join(files))
         self.client_socket.send(packet)
-        # chunks = [packet[i:i + 1024] for i in range(0, len(packet), 1024)]
-
-        # Send the chunks
-        # for chunk in chunks:
-        #    self.client_socket.send(chunk)
     
 def main():
     if len(sys.argv) != 4:

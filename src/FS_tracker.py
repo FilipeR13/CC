@@ -26,7 +26,6 @@ class fs_tracker():
 
     def handle_storage(self, socket_node, payload):
         files =  [file.decode('utf-8') for file in payload.split(b' ')]
-        print(files)
         self.nodes[socket_node.getpeername()[1]]['files'] = files
 
     def handle_order(self, socket_node, payload):
@@ -56,17 +55,19 @@ class fs_tracker():
             data = socket_node.recv(PACKET_SIZE)
             if not data:
                 break
-            data_decoded = data.decode()
-
-            if data_decoded == "Current nodes":
-                print("Lista de nodes atualmente conectados:")
-                for port, node in self.nodes.items():
-                    print("[" + f"Porta -> {port}" + "," + f"Host -> {node['host']}" + f", Files -> {node['files']}" + "]")
-            else:
-                length, message_type, payload = struct.unpack(f'!IB{len(data) - 5}s', data)
-                print(f"Data recebida pela porta {socket_node.getpeername()[1]}: {length} || {message_type} || {payload}")
-                print (message_type)
-                handle_flags[message_type](socket_node, payload)
+            message_type, length, payload = data[0], data[1:5], data[5:]
+            int_length = int.from_bytes(length, "big")
+            if int_length > PACKET_SIZE - 5:
+                while True:
+                    data = socket_node.recv(PACKET_SIZE)
+                    if not data:
+                        break
+                    payload += data
+                    if len(payload) == int_length:
+                        break
+                
+            print(f"Data recebida pela porta {socket_node.getpeername()[1]}: {length} || {message_type} || {payload}")
+            handle_flags[message_type](socket_node, payload)
 
         self.close_client(socket_node)
 
