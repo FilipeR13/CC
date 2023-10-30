@@ -76,7 +76,7 @@ class fs_tracker():
             
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.bind((self.host, new_port))
-            client_socket.listen(1)
+            client_socket.listen(5)
 
             response = str(new_port).encode('utf-8')
         else:
@@ -100,10 +100,10 @@ class fs_tracker():
                 print(f"Node conectado a partir de {host_node} na porta {porta_node}")
 
                 client_thread, new_socket = self.open_new_connection(socket_node)
-
-                self.node_threads[new_socket.getpeername()[1]] = client_thread
-                self.nodes[new_socket.getpeername()[1]] = {
-                    'host': new_socket.getpeername()[0],
+                host, porta = new_socket.getpeername()
+                self.node_threads[porta] = client_thread
+                self.nodes[porta] = {
+                    'host': host,
                     'files': []
                 }
                 
