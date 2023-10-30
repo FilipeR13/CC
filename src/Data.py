@@ -1,5 +1,3 @@
-import struct
-
 # Define message flags
 STORAGE = 0x01
 ORDER = 0x02

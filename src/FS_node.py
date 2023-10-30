@@ -2,7 +2,6 @@ import socket
 import sys
 import os
 from Data import *
-import struct
 
 
 class fs_node():
@@ -29,7 +28,9 @@ class fs_node():
 
     def handle_order(self, payload):
         self.client_socket.send(Message.create_message(ORDER, payload[0].encode('utf-8')))
-        message_type, payload = Message.receive_message(self.client_socket)
+        message_type, nodes = Message.receive_message(self.client_socket)
+        for node in nodes.split(b' '):
+            print(f"Node {int.from_bytes(node, 'big')} tem o arquivo {payload[0]}")
 
     def handle_quit(self, payload):
         self.client_socket.close()

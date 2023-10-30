@@ -1,6 +1,5 @@
 import socket
 import threading
-import struct
 import sys
 from Data import *
 class fs_tracker():
@@ -13,16 +12,6 @@ class fs_tracker():
         self.server_socket.listen(5)
         self.node_threads = {}
         self.nodes = {}
-
-    def find_available_port(self,host, starting_port, attempts=100):
-        for port in range(starting_port, starting_port + attempts):
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as new_socket:
-                    new_socket.bind((host, port))
-                    return port
-            except OSError:
-                pass
-        return None
 
     def handle_storage(self, socket_node, payload):
         files =  [file.decode('utf-8') for file in payload.split(b' ')]
@@ -37,7 +26,6 @@ class fs_tracker():
                     result.append(key)
         self.handle_ship(socket_node, result)
 
-    
     def handle_ship(self, socket_node, payload):
         nodes = [node.to_bytes(4,"big") for node in payload]
         socket_node.send(Message.create_message(SHIP, b' '.join(nodes)))
