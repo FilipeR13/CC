@@ -1,7 +1,7 @@
 import socket
 import sys
 import os
-from Data import Message
+from Data import *
 import struct
 
 
@@ -10,30 +10,30 @@ class fs_node():
         self.path = path
         self.host = host
         self.port = int(port)
-        self.exlusive_connection = None
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((self.host,self.port))
         print("Coneção FS Track Protocol com servidor localhost porta 9090")
 
     def send_data(self, data):
-        self.exlusive_connection.send(data.encode())
+        self.client_socket.send(data.encode())
 
 
     def receive_new_port(self):
-        response = self.client_socket.recv(1024)
+        response = self.client_socket.recv(PACKET_SIZE)
         if response:
             length, message_type, payload = struct.unpack(f'!IB{len(response) - 5}s', response)
-            if message_type == 0x03:
+            if message_type == LOGIN:
                 new_port = int(payload.decode('utf-8'))
                 print(f"Received new port: {new_port}")
                 return new_port
         return None
     
     def create_new_connection(self, new_port):
-
-        self.exlusive_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.exlusive_connection.connect((self.host, new_port))
+        self.client_socket.close()
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect((self.host, new_port))
         print(f"Conexão FS Track Protocol com servidor localhost porta {new_port}")
+
 
     def send_name_files(self):
         files = [f.encode('utf-8') for f in os.listdir() if os.path.isfile(f)]
@@ -42,8 +42,8 @@ class fs_node():
         print (total_length)
 
         # Pack the list of encoded strings into a struct
-        packet = Message(0x01, b' '.join(files), f'!IB{total_length}s').create_struct_message()
-        self.exlusive_connection.send(packet)
+        packet = Message(STORAGE, b' '.join(files), f'!IB{total_length}s').create_struct_message()
+        self.client_socket.send(packet)
         # chunks = [packet[i:i + 1024] for i in range(0, len(packet), 1024)]
 
         # Send the chunks

@@ -7,7 +7,7 @@ class fs_tracker():
 
     def __init__(self):
         self.host = 'localhost'
-        self.port = 9090
+        self.port = 9093
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
@@ -24,33 +24,35 @@ class fs_tracker():
                 pass
         return None
 
-    def handle_wake_up(self, socket_node, payload):
+    def handle_storage(self, socket_node, payload):
         files =  [file.decode('utf-8') for file in payload.split(b' ')]
         print(files)
         self.nodes[socket_node.getpeername()[1]]['files'] = files
 
-    def handle_request(self, socket_node, payload):
+    def handle_order(self, socket_node, payload):
         print("Request")
         print(payload)
 
     
-    def handle_response(self, socket_node, payload):
+    def handle_ship(self, socket_node, payload):
         print("Response")
         print(payload)
 
     def close_client(self, socket_node):
         print(f"Node {socket_node.getpeername()[1]} desconectado")
-        port = socket_node.getpeername()[1]
-        if port in self.node_threads:
-            self.node_threads[port].join()
-            del self.node_threads[port]
-        del self.nodes[port]
+        del self.node_threads[socket_node.getpeername()[1]]
+        del self.nodes[socket_node.getpeername()[1]]
         socket_node.close()
 
-    def handle_client(self, socket_node, connection_event):
-        while True:
-            connection_event.wait()
+    def handle_client(self, socket_node):
 
+        handle_flags = {
+            STORAGE: self.handle_storage,
+            ORDER: self.handle_order,
+            SHIP: self.handle_ship
+        }
+
+        while True:
             data = socket_node.recv(PACKET_SIZE)
             if not data:
                 break
@@ -63,52 +65,50 @@ class fs_tracker():
             else:
                 length, message_type, payload = struct.unpack(f'!IB{len(data) - 5}s', data)
                 print(f"Data recebida pela porta {socket_node.getpeername()[1]}: {length} || {message_type} || {payload}")
-
-                if message_type == WAKE_UP:
-                    self.handle_wake_up(socket_node, payload)
-                elif message_type == REQUEST:
-                    self.handle_request(socket_node, payload)
-                elif message_type == RESPONSE:
-                    self.handle_response(socket_node, payload)
+                print (message_type)
+                handle_flags[message_type](socket_node, payload)
 
         self.close_client(socket_node)
 
+    def open_new_connection(self, socket_node):
+        new_port = self.find_available_port(self.host, self.port + 1)
+        if new_port is not None:
+            
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.bind((self.host, new_port))
+            client_socket.listen(1)
+
+            response = str(new_port).encode('utf-8')
+        else:
+            response = "No available port".encode('utf-8')
+
+        response_message = Message(LOGIN, response, f'!IB{len(response)}s').create_struct_message()
+        socket_node.send(response_message)
+
+        new_socket, address_node = client_socket.accept()
+        client_thread = threading.Thread(target=self.handle_client, args=(new_socket,))
+        client_thread.start()   
+        return client_thread, new_socket
 
     def start_connections(self):
         print(f"Servidor ativo em {self.host} porta {self.port}")
         try:
             while True:
-                socket_node, address_node = self.server_socket.accept() #função accept retorna um tuplo.
+                socket_node, address_node = self.server_socket.accept() 
 
                 host_node, porta_node = socket_node.getpeername()
                 print(f"Node conectado a partir de {host_node} na porta {porta_node}")
 
-                new_port = self.find_available_port(self.host, self.port + 1)
-                if new_port is not None:
-                    
-                    new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    new_socket.bind((self.host, new_port))
-                    new_socket.listen(1)
+                client_thread, new_socket = self.open_new_connection(socket_node)
 
-                    connection_event = threading.Event()
-
-                    client_thread = threading.Thread(target=self.handle_client, args=(new_socket,connection_event))
-                    client_thread.start()
-
-                    response = str(new_port).encode('utf-8')
-                    response_message = Message(RESPONSE, response, f'!IB{len(response)}s').create_struct_message()
-                    socket_node.send(response_message)
-
-
-                else:
-                    response = "No available port".encode('utf-8')
-                    response_message = Message(RESPONSE, response, f'!IB{len(response)}s').create_struct_message()
-                    socket_node.send(response_message)
-
-                    self.nodes[new_port] = {
-                        'host': host_node,
-                        'files': []
-                    }
+                self.node_threads[new_socket.getpeername()[1]] = client_thread
+                self.nodes[new_socket.getpeername()[1]] = {
+                    'host': new_socket.getpeername()[0],
+                    'files': []
+                }
+                
+                socket_node.close()
+                
                 
         except KeyboardInterrupt:
             print("Keyboard Interrupt")

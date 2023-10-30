@@ -1,9 +1,10 @@
 import struct
 
 # Define message flags
-WAKE_UP = 0x01
-REQUEST = 0x02
-RESPONSE = 0x03
+LOGIN = 0x01
+STORAGE = 0x02
+ORDER = 0x03
+SHIP = 0x04
 
 PACKET_SIZE = 1024
 
