@@ -7,7 +7,7 @@ class fs_tracker():
 
     def __init__(self):
         self.host = 'localhost'
-        self.port = 9093
+        self.port = 9090
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
@@ -70,45 +70,23 @@ class fs_tracker():
 
         self.close_client(socket_node)
 
-    def open_new_connection(self, socket_node):
-        new_port = self.find_available_port(self.host, self.port + 1)
-        if new_port is not None:
-            
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.bind((self.host, new_port))
-            client_socket.listen(5)
-
-            response = str(new_port).encode('utf-8')
-        else:
-            response = "No available port".encode('utf-8')
-
-        response_message = Message(LOGIN, response, f'!IB{len(response)}s').create_struct_message()
-        socket_node.send(response_message)
-
-        new_socket, address_node = client_socket.accept()
-        client_thread = threading.Thread(target=self.handle_client, args=(new_socket,))
-        client_thread.start()   
-        return client_thread, new_socket
-
     def start_connections(self):
         print(f"Servidor ativo em {self.host} porta {self.port}")
         try:
             while True:
-                socket_node, address_node = self.server_socket.accept() 
+                socket_node, address_node = self.server_socket.accept()
 
                 host_node, porta_node = socket_node.getpeername()
                 print(f"Node conectado a partir de {host_node} na porta {porta_node}")
 
-                client_thread, new_socket = self.open_new_connection(socket_node)
-                host, porta = new_socket.getpeername()
-                self.node_threads[porta] = client_thread
-                self.nodes[porta] = {
-                    'host': host,
+                thread_node = threading.Thread(target=self.handle_client, args=(socket_node,))
+                self.node_threads[porta_node] = thread_node
+                thread_node.start()
+
+                self.nodes[porta_node] = {
+                    'host': host_node,
                     'files': []
                 }
-                
-                socket_node.close()
-                
                 
         except KeyboardInterrupt:
             print("Keyboard Interrupt")
