@@ -12,22 +12,25 @@ class fs_tracker():
         self.server_socket.listen(5)
         self.node_threads = {}
         self.nodes = {}
+        self.l = threading.Lock()
 
     def handle_storage(self, socket_node, payload):
         files =  [file.decode('utf-8') for file in payload.split(b' ')]
-        self.nodes[socket_node.getpeername()]= [(files[i], list(range(1,int(files[i + 1])+1))) for i in range(0, len(files), 2)]
+        with self.l:
+            self.nodes[socket_node.getpeername()]= [(files[i], list(range(1,int(files[i + 1])+1))) for i in range(0, len(files), 2)]
         print (f"Node {socket_node.getpeername()} tem os arquivos {self.nodes[socket_node.getpeername()]}")
 
     def handle_order(self, socket_node, payload):
         result = []
         file = payload.decode('utf-8')
-        for key, value in self.nodes.items():
-            if key != socket_node.getpeername():
-                for file_node in value:
-                    if file_node[0] == file:
-                        # result is a list of tuples (node, chunks)
-                        result.append((key,file_node[1]))
-                        break
+        with self.l:
+            for key, value in self.nodes.items():
+                if key != socket_node.getpeername():
+                    for file_node in value:
+                        if file_node[0] == file:
+                            # result is a list of tuples (node, chunks)
+                            result.append((key,file_node[1]))
+                            break
         self.handle_ship(socket_node, result)
 
     def handle_ship(self, socket_node, payload):
@@ -40,8 +43,9 @@ class fs_tracker():
 
     def close_client(self, socket_node):
         print(f"Node {socket_node.getpeername()} desconectado")
-        del self.node_threads[socket_node.getpeername()]
-        del self.nodes[socket_node.getpeername()]
+        with self.l:
+            del self.node_threads[socket_node.getpeername()]
+            del self.nodes[socket_node.getpeername()]
         socket_node.close()
 
     def handle_client(self, socket_node):
@@ -70,8 +74,9 @@ class fs_tracker():
                 print(f"Node conectado a partir de {host_node} na porta {porta_node}")
 
                 thread_node = threading.Thread(target=self.handle_client, args=(socket_node,))
-                self.node_threads[(host_node,porta_node)] = thread_node
-                self.nodes[(host_node,porta_node)] = []
+                with self.l:
+                    self.node_threads[(host_node,porta_node)] = thread_node
+                    self.nodes[(host_node,porta_node)] = []
 
                 thread_node.start()
                 
