@@ -2,7 +2,7 @@ import socket
 import sys
 import os
 import math
-from Data import *
+from TCP_Message import *
 from FS_Track_Protocol import *
 
 
@@ -15,7 +15,8 @@ class fs_node():
     def handle_input(self,input):
         inputs = {
             'order' : self.tcp_connection.handle_order,
-            'quit' : self.tcp_connection.handle_quit
+            'quit' : self.tcp_connection.handle_quit,
+            'q' : self.tcp_connection.handle_quit
         }
         command = input.split(' ')
         if (command[0] not in inputs):

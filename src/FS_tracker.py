@@ -1,7 +1,7 @@
 import socket
 import threading
 import sys
-from Data import *
+from TCP_Message import *
 class fs_tracker():
 
     def __init__(self):
@@ -15,17 +15,19 @@ class fs_tracker():
         self.l = threading.Lock()
 
     def handle_storage(self, socket_node, payload):
-        files =  [file.decode('utf-8') for file in payload.split(b' ')]
+        files =  [file for file in payload.split(b' ')]
         with self.l:
-            self.nodes[socket_node.getpeername()]= [(files[i], list(range(1,int(files[i + 1])+1))) for i in range(0, len(files), 2)]
+            self.nodes[socket_node.getpeername()]= [(files[i].decode('utf-8'), [int.from_bytes(chunk,'big') for chunk in files[i+1].split(b',')]) for i in range(0, len(files), 2)]
         print (f"Node {socket_node.getpeername()} tem os arquivos {self.nodes[socket_node.getpeername()]}")
 
     def handle_order(self, socket_node, payload):
         result = []
         file = payload.decode('utf-8')
+        print(file)
         with self.l:
             for key, value in self.nodes.items():
                 if key != socket_node.getpeername():
+                    print (value)
                     for file_node in value:
                         if file_node[0] == file:
                             # result is a list of tuples (node, chunks)
@@ -35,6 +37,7 @@ class fs_tracker():
 
     def handle_ship(self, socket_node, payload):
         nodes = []
+        print (payload)
         for key, chunks in payload:
             nodes.append(key[0].encode('utf-8'))
             nodes.append(key[1].to_bytes(4, byteorder='big'))

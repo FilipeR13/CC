@@ -22,5 +22,5 @@ class Message:
                 payload += data
                 if len(payload) == int_length:
                     break
-        print(f"Data recebida pela porta {socket.getpeername()[1]}: {length} || {message_type} || {payload}")
+    #    print(f"Data recebida pela porta {socket.getpeername()[1]}: {length} || {message_type} || {payload}")
         return message_type, payload
