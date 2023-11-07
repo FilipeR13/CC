@@ -11,14 +11,17 @@ class fs_tracker():
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
         self.node_threads = {}
+        # dict of nodes and files: Key = (host,port); Value = [(name file, [chunks], [hashes])]
         self.nodes = {}
         self.l = threading.Lock()
 
     def handle_storage(self, socket_node, payload):
         files =  [file for file in payload.split(b' ')]
         with self.l:
-            self.nodes[socket_node.getpeername()]= [(files[i].decode('utf-8'), [int.from_bytes(chunk,'big') for chunk in files[i+1].split(b',')]) for i in range(0, len(files), 2)]
-        print (f"Node {socket_node.getpeername()} tem os arquivos {self.nodes[socket_node.getpeername()]}")
+            self.nodes[socket_node.getpeername()]= [
+                    (files[i].decode('utf-8') , [int.from_bytes(chunk,'big') for chunk in files[i+1].split(b',')], [hash.decode('utf-8') for hash in files[i+2].split(b',')]) 
+                    for i in range(0, len(files), 3)
+                ]
 
     def handle_order(self, socket_node, payload):
         result = []
@@ -30,18 +33,19 @@ class fs_tracker():
                     print (value)
                     for file_node in value:
                         if file_node[0] == file:
-                            # result is a list of tuples (node, chunks)
-                            result.append((key,file_node[1]))
+                            # result is a list of tuples (node, chunks, hashes)
+                            result.append((key,file_node[1], file_node[2]))
                             break
         self.handle_ship(socket_node, result)
 
     def handle_ship(self, socket_node, payload):
         nodes = []
         print (payload)
-        for key, chunks in payload:
+        for key, chunks, hashes in payload:
             nodes.append(key[0].encode('utf-8'))
             nodes.append(key[1].to_bytes(4, byteorder='big'))
             nodes.append(b','.join([chunk.to_bytes(4, byteorder='big') for chunk in chunks]))
+            nodes.append(b','.join([hash.encode('utf-8') for hash in hashes]))
         socket_node.send(Message.create_message(SHIP, b' '.join(nodes)))
 
     def close_client(self, socket_node):

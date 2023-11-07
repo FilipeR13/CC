@@ -3,6 +3,7 @@ from TCP_Message import *
 import sys
 import os
 import math
+import hashlib
 
 class Node_Connection:
     def __init__ (self, host, port, path):
@@ -13,16 +14,26 @@ class Node_Connection:
         self.client_socket.connect((self.host,self.port))
         print(f"Coneção FS Track Protocol com servidor localhost porta {port}")
 
-    def send_data(self, data):
-        self.client_socket.send(data.encode())
-
     def send_name_files(self):
-        files = [f for f in os.listdir() if os.path.isfile(f)] 
+        files = [f for f in os.listdir(self.path) if os.path.isfile(self.path + f)]
         result = b""
-        for file in files:
-            size = os.path.getsize(file)
+        for file_name in files:
+            # get hash of file in chunks
+            sha1_hashes = []
+            with open(self.path + file_name, 'rb') as file:
+                while True:
+                    data = file.read(1024)
+                    if not data:
+                        break
+                    sha1_hash = hashlib.sha1(data)
+                    sha1_hashes.append(sha1_hash.hexdigest())
+
+            size = os.path.getsize(self.path + file_name)
             number_of_chunks = math.ceil(size / PACKET_SIZE)
-            result += file.encode('utf-8') + b" " + b','.join([chunk.to_bytes(4, byteorder='big') for chunk in range(1,number_of_chunks+1)]) + b" "
+
+            result += file_name.encode('utf-8') + b" " # name of file
+            result += b','.join([chunk.to_bytes(4, byteorder='big') for chunk in range(1,number_of_chunks+1)]) + b" " # array of chunks
+            result += b','.join([sha1_hash.encode('utf-8') for sha1_hash in sha1_hashes]) + b" " # array of hashes of chunks
 
         # Pack the list of encoded strings into a struct
         packet = Message.create_message(STORAGE, result[:-1])
