@@ -49,6 +49,5 @@ class Node_Connection:
         for i in range(0, len(list_nodes), 3):
             print(f"Node ({list_nodes[i].decode('utf-8')},{int.from_bytes(list_nodes[i+1],'big')}) tem os chunks {[int.from_bytes(chunk,'big') for chunk in list_nodes[i+2].split(b',')]} do arquivo {payload[0]}")
 
-    def handle_quit(self, payload):
+    def close_connection (self):
         self.client_socket.close()
-        sys.exit(0)
