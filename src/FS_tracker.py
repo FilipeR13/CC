@@ -6,7 +6,7 @@ class fs_tracker():
 
     def __init__(self):
         self.host = 'localhost'
-        self.port = 9091
+        self.port = 9090
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
@@ -76,14 +76,12 @@ class fs_tracker():
         try:
             while True:
                 socket_node, address_node = self.server_socket.accept()
-
-                host_node, porta_node = socket_node.getpeername()
-                print(f"Node conectado a partir de {host_node} na porta {porta_node}")
+                print(f"Node conectado a partir de {address_node[0]} na porta {address_node[1]}")
 
                 thread_node = threading.Thread(target=self.handle_client, args=(socket_node,))
                 with self.l:
-                    self.node_threads[(host_node,porta_node)] = thread_node
-                    self.nodes[(host_node,porta_node)] = []
+                    self.node_threads[address_node] = thread_node
+                    self.nodes[address_node] = []
 
                 thread_node.start()
                 

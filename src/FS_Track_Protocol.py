@@ -46,8 +46,8 @@ class Node_Connection:
         if list_nodes == [b'']:
             print(f"Arquivo {payload[0]} não encontrado")
             return
-        for i in range(0, len(list_nodes), 3):
-            print(f"Node ({list_nodes[i].decode('utf-8')},{int.from_bytes(list_nodes[i+1],'big')}) tem os chunks {[int.from_bytes(chunk,'big') for chunk in list_nodes[i+2].split(b',')]} do arquivo {payload[0]}")
+        for i in range(0, len(list_nodes), 4):
+            print(f"Node ({list_nodes[i].decode('utf-8')},{int.from_bytes(list_nodes[i+1],'big')}) tem os chunks {[int.from_bytes(chunk,'big') for chunk in list_nodes[i+2].split(b',')]} com as hashes  {[hashes.decode('utf-8') for hashes in list_nodes[i+3].split(b',')]} do arquivo {payload[0]}")
 
     def close_connection (self):
         self.client_socket.close()

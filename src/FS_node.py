@@ -36,12 +36,12 @@ def main():
     node = fs_node(sys.argv[1],sys.argv[2],sys.argv[3])
 
     node.tcp_connection.send_name_files()
+
     node.udp_connection.get_hashes_files()
 
     udpprotocol = threading.Thread(target=node.udp_connection.handle_udp)
     udpprotocol.daemon = True  # Mark as a daemon thread
     udpprotocol.start()
-
     try:
         while True:
             user_input = input("> ")
