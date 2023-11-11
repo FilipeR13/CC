@@ -3,18 +3,12 @@ import hashlib
 import os
 
 class Node_Transfer:
-    def __init__ (self, host, port, path):
-        self.host = host
+    def __init__ (self, port, path):
         self.port = port
         self.path = path
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udp_socket.bind((host, port))
+        self.udp_socket.bind(('', port))
         self.files_hashes = {}
-
-    def get_hashes_files(self):
-        for file in os.listdir(self.path):
-            if os.path.isfile(self.path + file):
-                self.files_hashes[file] = hashlib.sha1(file.encode('utf-8')).hexdigest()
     
     def handle_udp (self):
         while True:

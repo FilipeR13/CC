@@ -10,7 +10,7 @@ class fs_node():
         if path[-1] != '/':
             path += '/'
         self.tcp_connection = Node_Connection(host, int(port), path)
-        self.udp_connection = Node_Transfer(host, int(port), path)
+        self.udp_connection = Node_Transfer(int(port), path)
     
     def handle_quit(self, payload):
         self.tcp_connection.close_connection()
@@ -36,8 +36,6 @@ def main():
     node = fs_node(sys.argv[1],sys.argv[2],sys.argv[3])
 
     node.tcp_connection.send_name_files()
-
-    node.udp_connection.get_hashes_files()
 
     udpprotocol = threading.Thread(target=node.udp_connection.handle_udp)
     udpprotocol.daemon = True  # Mark as a daemon thread

@@ -5,10 +5,10 @@ from TCP_Message import *
 class fs_tracker():
 
     def __init__(self):
-        self.host = 'localhost'
+        self.name = socket.gethostname()
         self.port = 9090
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.bind((self.host, self.port))
+        self.server_socket.bind(('', self.port))
         self.server_socket.listen(5)
         self.node_threads = {}
         # dict of nodes and files: Key = (host,port); Value = [(name file, [chunks], [hashes])]
@@ -16,10 +16,15 @@ class fs_tracker():
         self.l = threading.Lock()
 
     def handle_storage(self, socket_node, payload):
-        files =  [file for file in payload.split(b' ')]
+        files =payload.split(b' ')
+        print(files)
         with self.l:
             self.nodes[socket_node.getpeername()]= [
-                    (files[i].decode('utf-8') , [int.from_bytes(chunk,'big') for chunk in files[i+1].split(b',')], [hash.decode('utf-8') for hash in files[i+2].split(b',')]) 
+                    (
+                        files[i].decode('utf-8') ,
+                        [int.from_bytes(chunk,'big') for chunk in files[i+1].split(b',')] ,
+                        [hash.decode('utf-8') for hash in files[i+2].split(b',')]
+                    ) 
                     for i in range(0, len(files), 3)
                 ]
 
@@ -72,7 +77,7 @@ class fs_tracker():
         self.close_client(socket_node)
 
     def start_connections(self):
-        print(f"Servidor ativo em {self.host} porta {self.port}")
+        print(f"Servidor ativo em {self.server_socket.getsockname()[0]} porta {self.port}")
         try:
             while True:
                 socket_node, address_node = self.server_socket.accept()
