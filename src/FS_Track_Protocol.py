@@ -42,12 +42,14 @@ class Node_Connection:
     def handle_order(self, payload):
         self.client_socket.send(Message.create_message(ORDER, payload[0].encode('utf-8')))
         message_type, nodes = Message.receive_message(self.client_socket)
-        list_nodes = nodes.split(b' ')
-        if list_nodes == [b'']:
+        list = nodes.split(b' ')
+        hashes, nodes = list[-1].split(b','), list[:-1]
+        if nodes == []:
             print(f"Arquivo {payload[0]} não encontrado")
             return
-        for i in range(0, len(list_nodes), 4):
-            print(f"Node ({list_nodes[i].decode('utf-8')},{int.from_bytes(list_nodes[i+1],'big')}) tem os chunks {[int.from_bytes(chunk,'big') for chunk in list_nodes[i+2].split(b',')]} com as hashes  {[hashes.decode('utf-8') for hashes in list_nodes[i+3].split(b',')]} do arquivo {payload[0]}")
-
+        for i in range(0, len(nodes), 3):
+            print(f"Node ({nodes[i].decode('utf-8')},{int.from_bytes(nodes[i+1],'big')}) tem os chunks {[int.from_bytes(chunk,'big') for chunk in nodes[i+2].split(b',')]} do arquivo {payload[0]}")
+        for i in range(0,len(hashes)):
+            print (f"Hash do chunk {i+1}: {hashes[i]}")
     def close_connection (self):
         self.client_socket.close()

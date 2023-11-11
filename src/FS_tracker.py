@@ -11,46 +11,47 @@ class fs_tracker():
         self.server_socket.bind(('', self.port))
         self.server_socket.listen(5)
         self.node_threads = {}
-        # dict of nodes and files: Key = (host,port); Value = [(name file, [chunks], [hashes])]
+        # dict of nodes and files: Key = (host,port); Value = {name file : [chunks]}
         self.nodes = {}
+        # dict of files: Key = name file; Value = {chunk : hash}
+        self.files = {}
         self.l = threading.Lock()
 
     def handle_storage(self, socket_node, payload):
         files =payload.split(b' ')
         print(files)
         with self.l:
-            self.nodes[socket_node.getpeername()]= [
-                    (
-                        files[i].decode('utf-8') ,
-                        [int.from_bytes(chunk,'big') for chunk in files[i+1].split(b',')] ,
-                        [hash.decode('utf-8') for hash in files[i+2].split(b',')]
-                    ) 
-                    for i in range(0, len(files), 3)
-                ]
+            for i in range(0, len(files), 3):
+                name = files[i].decode('utf-8')
+                chunks = [int.from_bytes(chunk,'big') for chunk in files[i+1].split(b',')]
+                hashes = [hash.decode('utf-8') for hash in files[i+2].split(b',')]
+                if name not in self.files:
+                    self.files[name] = {}
+                for chunk, hash in zip(chunks, hashes):
+                    self.files[name][chunk] = hash
+                self.nodes[socket_node.getpeername()][name] = chunks          
 
     def handle_order(self, socket_node, payload):
         result = []
         file = payload.decode('utf-8')
-        print(file)
+        node_who_asked = socket_node.getpeername()
         with self.l:
             for key, value in self.nodes.items():
-                if key != socket_node.getpeername():
-                    print (value)
-                    for file_node in value:
-                        if file_node[0] == file:
-                            # result is a list of tuples (node, chunks, hashes)
-                            result.append((key,file_node[1], file_node[2]))
-                            break
-        self.handle_ship(socket_node, result)
+                if key != node_who_asked:
+                    if file in value:
+                        # result is a list of tuples (node, chunks)
+                        result.append((key, value.get(file)))
+        self.handle_ship(socket_node, result, file)
 
-    def handle_ship(self, socket_node, payload):
+    def handle_ship(self, socket_node, payload, file):
         nodes = []
         print (payload)
-        for key, chunks, hashes in payload:
+        for key, chunks in payload:
             nodes.append(key[0].encode('utf-8'))
             nodes.append(key[1].to_bytes(4, byteorder='big'))
             nodes.append(b','.join([chunk.to_bytes(4, byteorder='big') for chunk in chunks]))
-            nodes.append(b','.join([hash.encode('utf-8') for hash in hashes]))
+        if nodes:
+            nodes.append(b','.join([hash.encode('utf-8') for hash in self.files[file].values()]))
         socket_node.send(Message.create_message(SHIP, b' '.join(nodes)))
 
     def close_client(self, socket_node):
@@ -65,7 +66,6 @@ class fs_tracker():
         handle_flags = {
             STORAGE: self.handle_storage,
             ORDER: self.handle_order,
-            SHIP: self.handle_ship
         }
 
         while True:
@@ -86,7 +86,7 @@ class fs_tracker():
                 thread_node = threading.Thread(target=self.handle_client, args=(socket_node,))
                 with self.l:
                     self.node_threads[address_node] = thread_node
-                    self.nodes[address_node] = []
+                    self.nodes[address_node] = {}
 
                 thread_node.start()
                 
