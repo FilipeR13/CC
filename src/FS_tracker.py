@@ -52,7 +52,7 @@ class fs_tracker():
             nodes.append(b','.join([chunk.to_bytes(4, byteorder='big') for chunk in chunks]))
         if nodes:
             nodes.append(b','.join([hash.encode('utf-8') for hash in self.files[file].values()]))
-        socket_node.send(Message.create_message(SHIP, b' '.join(nodes)))
+        socket_node.send(TCP_Message.create_message(SHIP, b' '.join(nodes)))
 
     def close_client(self, socket_node):
         print(f"Node {socket_node.getpeername()} desconectado")
@@ -69,7 +69,7 @@ class fs_tracker():
         }
 
         while True:
-            message_type, payload = Message.receive_message(socket_node)
+            message_type, payload = TCP_Message.receive_message(socket_node)
             if not payload:
                 break
             handle_flags[message_type](socket_node, payload)

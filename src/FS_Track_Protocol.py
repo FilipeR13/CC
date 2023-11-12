@@ -36,12 +36,12 @@ class Node_Connection:
             result += b','.join([sha1_hash.encode('utf-8') for sha1_hash in sha1_hashes]) + b" " # array of hashes of chunks
 
         # Pack the list of encoded strings into a struct
-        packet = Message.create_message(STORAGE, result[:-1])
+        packet = TCP_Message.create_message(STORAGE, result[:-1])
         self.client_socket.send(packet)
 
     def handle_order(self, payload):
-        self.client_socket.send(Message.create_message(ORDER, payload[0].encode('utf-8')))
-        message_type, nodes = Message.receive_message(self.client_socket)
+        self.client_socket.send(TCP_Message.create_message(ORDER, payload[0].encode('utf-8')))
+        message_type, nodes = TCP_Message.receive_message(self.client_socket)
         list = nodes.split(b' ')
         hashes, nodes = list[-1].split(b','), list[:-1]
         if nodes == []:

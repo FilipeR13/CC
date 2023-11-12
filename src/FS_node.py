@@ -1,6 +1,4 @@
 import sys
-import hashlib
-from TCP_Message import *
 from FS_Track_Protocol import *
 from FS_Transfer_Protocol import *
 import threading
