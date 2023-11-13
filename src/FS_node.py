@@ -8,8 +8,13 @@ class fs_node():
         if path[-1] != '/':
             path += '/'
         self.tcp_connection = Node_Connection(host, int(port), path)
-        self.udp_connection = Node_Transfer(int(port), path)
+        self.udp_connection = Node_Transfer(int(port))
     
+    def handle_order(self, payload):
+        ip, chunks = self.tcp_connection.handle_order(payload)
+        if ip:
+            self.udp_connection.get_file(payload,ip, chunks)
+
     def handle_quit(self, payload):
         self.tcp_connection.close_connection()
         self.udp_connection.close_connection()
@@ -17,7 +22,7 @@ class fs_node():
 
     def handle_input(self,input):
         inputs = {
-            'order' : self.tcp_connection.handle_order,
+            'order' : self.handle_order,
             'quit' : self.handle_quit,
             'q' : self.handle_quit
         }

@@ -13,7 +13,7 @@ class fs_tracker():
         self.node_threads = {}
         # dict of nodes and files: Key = (host,port); Value = {name file : [chunks]}
         self.nodes = {}
-        # dict of files: Key = name file; Value = {chunk : hash}
+        # dict of files: Key = name file : [nodes]
         self.files = {}
         self.l = threading.Lock()
 

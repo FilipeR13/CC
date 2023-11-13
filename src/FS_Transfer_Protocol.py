@@ -1,15 +1,21 @@
 import socket
 import hashlib
-import os
+from UDP_Protocol import * 
 
 class Node_Transfer:
-    def __init__ (self, port, path):
+    def __init__ (self, port):
         self.port = port
-        self.path = path
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.bind(('', port))
         self.files_hashes = {}
     
+    def get_file(self, file, chunks, ip):
+        message = UDP_Message.create_message_udp(ORDER,file.encode('uft-8') + b' ' + b','.join([chunk.to_bytes(4, byteorder='big') for chunk in range(0,len(chunks))]))
+        # send order to get file
+        UDP_Message.send_message(self.udp_socket, message, ip, self.port)
+        return UDP_Message.receive_chunks(self.udp_socket, chunks, ip, self.port)
+
+
     def handle_udp (self):
         while True:
             message, address = self.udp_socket.recvfrom(1024)

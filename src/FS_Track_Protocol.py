@@ -46,10 +46,14 @@ class Node_Connection:
         hashes, nodes = list[-1].split(b','), list[:-1]
         if nodes == []:
             print(f"Arquivo {payload[0]} não encontrado")
-            return
+            return None
+        ips, chunks = [], []
+        pos = 0
         for i in range(0, len(nodes), 3):
-            print(f"Node ({nodes[i].decode('utf-8')},{int.from_bytes(nodes[i+1],'big')}) tem os chunks {[int.from_bytes(chunk,'big') for chunk in nodes[i+2].split(b',')]} do arquivo {payload[0]}")
-        for i in range(0,len(hashes)):
-            print (f"Hash do chunk {i+1}: {hashes[i]}")
+            ips[pos] = nodes[i].decode('utf-8')
+            chunks[pos] = [int.from_bytes(chunk,'big') for chunk in nodes[i+2].split(b',')]
+            pos += 1
+        print (ips, chunks)
+        return ips[0], chunks[0]
     def close_connection (self):
         self.client_socket.close()
