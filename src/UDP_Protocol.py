@@ -18,7 +18,7 @@ class UDP_Message:
         message_type, chunk, payload, hash = data[0], data[1:5], data[5:-40], data[-40:]
         if hash != hashlib.sha1(data[:-40]).hexdigest().encode('utf-8'):
             return RESEND, chunk, payload
-        return message_type, chunk, payload
+        return message_type, chunk, payload,ip
     
     def send_message (socket, message, ip, port):
         socket.sendto(message, (ip, port))

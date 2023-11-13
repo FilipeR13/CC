@@ -18,15 +18,11 @@ class Node_Transfer:
 
     def handle_udp (self):
         while True:
-            message, address = self.udp_socket.recvfrom(1024)
-            message = message.decode('utf-8')
-            if message == 'GET':
-                self.udp_socket.sendto(self.files_hashes, address)
-            elif message == 'PUT':
-                file_name, file_hash = address
-                self.files_hashes[file_name] = file_hash
-            else:
-                print("Mensagem inválida")     
+            message_type, chunk, payload, ip = UDP_Message.receive_message_udp(self.udp_socket)
+            if message_type == ORDER:
+                file, chunks = payload.split(b' ')
+                self.files_hashes[file] = UDP_Message.send_chunks(self.udp_socket, file, [int.from_bytes(chunk,'big') for chunk in chunks.split(b',')] , ip, self.port)
+
 
     def close_connection (self):
         self.udp_socket.close()

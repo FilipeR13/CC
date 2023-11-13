@@ -15,16 +15,20 @@ class Node_Connection:
         print(f"Coneção FS Track Protocol com servidor {self.host} porta {port}")
 
     def send_name_files(self):
+        dict_files = {}
         files = [f for f in os.listdir(self.path) if os.path.isfile(self.path + f)]
         result = b""
         for file_name in files:
             # get hash of file in chunks
             sha1_hashes = []
+            i = 0
             with open(self.path + file_name, 'rb') as file:
                 while True:
                     data = file.read(1024)
                     if not data:
                         break
+                    dict_files[i] = data
+                    i += 1
                     sha1_hash = hashlib.sha1(data)
                     sha1_hashes.append(sha1_hash.hexdigest())
 
@@ -38,6 +42,7 @@ class Node_Connection:
         # Pack the list of encoded strings into a struct
         packet = TCP_Message.create_message(STORAGE, result[:-1])
         self.client_socket.send(packet)
+        return dict_files
 
     def handle_order(self, payload):
         self.client_socket.send(TCP_Message.create_message(ORDER, payload[0].encode('utf-8')))
