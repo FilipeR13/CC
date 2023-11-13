@@ -7,7 +7,6 @@ class fs_node():
     def __init__(self,path, host, port):
         if path[-1] != '/':
             path += '/'
-        self.dict_files = {}
         self.tcp_connection = Node_Connection(host, int(port), path)
         self.udp_connection = Node_Transfer(int(port))
     
@@ -39,8 +38,8 @@ def main():
 
     node = fs_node(sys.argv[1],sys.argv[2],sys.argv[3])
 
-    node.dict_files = node.tcp_connection.send_name_files()
-
+    dict_files = node.tcp_connection.send_name_files()
+    node.udp_connection.dict_files = dict_files
     udpprotocol = threading.Thread(target=node.udp_connection.handle_udp)
     udpprotocol.daemon = True  # Mark as a daemon thread
     udpprotocol.start()

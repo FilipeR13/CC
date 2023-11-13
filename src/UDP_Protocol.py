@@ -12,32 +12,40 @@ class UDP_Message:
         return message + hashlib.sha1(message).hexdigest().encode('utf-8')
     
     def receive_message_udp(socket):
-        data = socket.recv(1073) # 1024 bytes do chunk + 9 bytes do cabeçalho + 40 bytes do hash
+        data, ip = socket.recvfrom(1073) # 1024 bytes do chunk + 9 bytes do cabeçalho + 40 bytes do hash
         if not data:
-            return None, None, None
+            return None, None, None, None
         message_type, chunk, payload, hash = data[0], data[1:5], data[5:-40], data[-40:]
         if hash != hashlib.sha1(data[:-40]).hexdigest().encode('utf-8'):
-            return RESEND, chunk, payload
-        return message_type, chunk, payload,ip
+            socket.sendto(UDP_Message.create_message_udp(RESEND, b''), ip)
+            return UDP_Message.receive_message_udp(socket)
+        return message_type, chunk, payload, ip
     
     def send_message (socket, message, ip, port):
         socket.sendto(message, (ip, port))
         # socket.settimeout(0.5)
         message_type, chunk, payload = UDP_Message.receive_message_udp(socket)
-
-        if message_type == RESEND:
+        # ! verificar
+        if message_type == None:
             chunk, payload = UDP_Message.send_message(socket, message, ip, port)
 
         return chunk,payload
-
-    def receive_chunks (socket, chunks, ip, porta):
-        chunks = {}
-        while chunks:
-            message_type, chunk, payload = UDP_Message.receive_message_udp(socket)
-            if message_type == DATA:
-                chunks[chunk] = payload
-                UDP_Message.send_message(socket, UDP_Message.create_message_udp(ACK, b''), ip, porta)
-        return chunks
     
-    def send_chunks (socket, file, path, ip, porta):
-        message = UDP_Message.create_message_udp(DATA, path.encode('utf-8'))
+    def receive_chunk(socket, ip, porta):
+        message_type, chunk, payload = UDP_Message.receive_message_udp(socket)
+        if message_type == DATA:
+            UDP_Message.send_message(socket, UDP_Message.create_message_udp(ACK, b''), ip, porta)
+            return chunk, payload
+
+
+    def send_chunks (socket, dict_chunks, chunks_to_send, ip, porta):
+        if not chunks_to_send:
+            return
+        chunk = chunks_to_send[0]
+        message = UDP_Message.create_message_udp(DATA, dict_chunks[chunk], chunk)
+        UDP_Message.send_message(socket, message, ip, porta)
+        message_type, _, _, _ = UDP_Message.receive_message_udp(socket)
+        if message_type == ACK:
+            chunks_to_send.remove(chunk)
+        UDP_Message.send_chunks(socket, dict_chunks, chunks_to_send, ip, porta)
+
