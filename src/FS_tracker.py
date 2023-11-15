@@ -2,6 +2,7 @@ import socket
 import threading
 import sys
 from TCP_Message import *
+from dataToBytes import *
 class fs_tracker():
 
     def __init__(self):
@@ -23,8 +24,8 @@ class fs_tracker():
         with self.l:
             for i in range(0, len(files), 3):
                 name = files[i].decode('utf-8')
-                chunks = [int.from_bytes(chunk,'big') for chunk in files[i+1].split(b',')]
-                hashes = [hash.decode('utf-8') for hash in files[i+2].split(b',')]
+                chunks = arrayBytesToInt(files[i+1])
+                hashes = arrayBytesToString(files[i+2])
                 if name not in self.files:
                     self.files[name] = {}
                 for chunk, hash in zip(chunks, hashes):
@@ -49,9 +50,9 @@ class fs_tracker():
         for key, chunks in payload:
             nodes.append(key[0].encode('utf-8'))
             nodes.append(key[1].to_bytes(4, byteorder='big'))
-            nodes.append(b','.join([chunk.to_bytes(4, byteorder='big') for chunk in chunks]))
+            nodes.append(arrayIntToBytes(chunks))
         if nodes:
-            nodes.append(b','.join([hash.encode('utf-8') for hash in self.files[file].values()]))
+            nodes.append(arrayStringToBytes(self.files[file].values()))
         socket_node.send(TCP_Message.create_message(SHIP, b' '.join(nodes)))
 
     def close_client(self, socket_node):
@@ -91,7 +92,7 @@ class fs_tracker():
                 thread_node.start()
                 
         except KeyboardInterrupt:
-            print("Keyboard Interrupt")
+            print("\nServer disconnected")
             self.server_socket.close()
             sys.exit(0)
 

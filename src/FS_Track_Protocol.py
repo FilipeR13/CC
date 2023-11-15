@@ -1,6 +1,6 @@
 import socket
 from TCP_Message import *
-import sys
+from dataToBytes import *
 import os
 import math
 import hashlib
@@ -36,8 +36,8 @@ class Node_Connection:
             number_of_chunks = math.ceil(size / PACKET_SIZE)
 
             result += file_name.encode('utf-8') + b" " # name of file
-            result += b','.join([chunk.to_bytes(4, byteorder='big') for chunk in range(1,number_of_chunks+1)]) + b" " # array of chunks
-            result += b','.join([sha1_hash.encode('utf-8') for sha1_hash in sha1_hashes]) + b" " # array of hashes of chunks
+            result += arrayIntToBytes(range(1,number_of_chunks+1)) + b" " # array of chunks
+            result += arrayStringToBytes(sha1_hashes) + b" " # array of hashes of chunks
 
         # Pack the list of encoded strings into a struct
         packet = TCP_Message.create_message(STORAGE, result[:-1])
@@ -51,12 +51,12 @@ class Node_Connection:
         hashes, nodes = list[-1].split(b','), list[:-1]
         if nodes == []:
             print(f"Arquivo {payload[0]} não encontrado")
-            return None
+            return None, None
         ips, chunks = [], []
         pos = 0
         for i in range(0, len(nodes), 3):
             ips[pos] = nodes[i].decode('utf-8')
-            chunks[pos] = [int.from_bytes(chunk,'big') for chunk in nodes[i+2].split(b',')]
+            chunks[pos] = arrayBytesToInt(nodes[i+1])
             pos += 1
         print (ips, chunks)
         return ips[0], chunks[0]

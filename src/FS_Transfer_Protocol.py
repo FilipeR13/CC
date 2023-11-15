@@ -1,6 +1,7 @@
 import socket
 import hashlib
 from UDP_Protocol import * 
+from dataToBytes import * 
 
 class Node_Transfer:
     def __init__ (self, port):
@@ -11,7 +12,7 @@ class Node_Transfer:
         self.dict_files = {}
 
     def get_file(self, file, chunks, ip):
-        message = UDP_Message.create_message_udp(ORDER,file.encode('uft-8') + b' ' + b','.join([chunk.to_bytes(4, byteorder='big') for chunk in range(0,len(chunks))]))
+        message = UDP_Message.create_message_udp(ORDER,file.encode('uft-8') + b' ' + arrayIntToBytes(range(0,len(chunks))))
         # send order to get file
         UDP_Message.send_message(self.udp_socket, message, ip, self.port)
 
@@ -30,7 +31,7 @@ class Node_Transfer:
             message_type, chunk, payload, ip = UDP_Message.receive_message_udp(self.udp_socket)
             if message_type == ORDER:
                 file, chunks = payload.split(b' ')
-                UDP_Message.send_chunks(self.udp_socket, self.dict_files[file], [int.from_bytes(chunk,'big') for chunk in chunks.split(b',')], ip, self.port)
+                UDP_Message.send_chunks(self.udp_socket, self.dict_files[file], arrayBytesToInt(chunks), ip, self.port)
 
 
     def close_connection (self):
