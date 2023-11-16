@@ -8,7 +8,7 @@ class fs_node():
         if path[-1] != '/':
             path += '/'
         self.tcp_connection = Node_Connection(host, int(port), path)
-        self.udp_connection = Node_Transfer(int(port))
+        self.udp_connection = Node_Transfer(int(9091))
     
     def handle_order(self, payload):
         print(payload)

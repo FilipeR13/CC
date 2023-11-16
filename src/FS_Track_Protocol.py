@@ -36,7 +36,7 @@ class Node_Connection:
             number_of_chunks = math.ceil(size / PACKET_SIZE)
 
             result += file_name.encode('utf-8') + b" " # name of file
-            result += arrayIntToBytes(range(1,number_of_chunks+1)) + b" " # array of chunks
+            result += arrayIntToBytes(list(range(1,number_of_chunks+1))) + b" " # array of chunks
             result += arrayStringToBytes(sha1_hashes) + b" " # array of hashes of chunks
 
         # Pack the list of encoded strings into a struct
@@ -51,7 +51,7 @@ class Node_Connection:
         hashes, nodes = list[-1].split(b','), list[:-1]
         print(nodes)
         if nodes == []:
-            print(f"Arquivo {payload[0]} não encontrado")
+            print(f"Arquivo {payload} não encontrado")
             return None, None
         ips, chunks = [], []
         for i in range(0, len(nodes), 3):

@@ -1,25 +1,18 @@
 import hashlib
 
 ORDER = 0x1
-ACK = 0x2
-RESEND = 0x3
-DATA = 0x4
-
+DATA = 0x2
 
 class UDP_Message:
-    def create_message_udp(flag, payload, chunk = 0):
-        message = bytearray([flag]) + chunk.to_bytes(4, byteorder='big') + payload
-        return message + hashlib.sha1(message).hexdigest().encode('utf-8')
+    def create_message_udp(flag, payload, file, chunk = 0):
+        return bytearray([flag]) +file.encode('utf-8') + chunk.to_bytes(4, byteorder='big') + payload
     
     def receive_message_udp(socket):
-        data, ip = socket.recvfrom(1073) # 1024 bytes do chunk + 9 bytes do cabeçalho + 40 bytes do hash
+        data, ip = socket.recvfrom(1033) # 1024 bytes do chunk + 9 bytes do cabeçalho + 40 bytes do hash
         if not data:
             return None, None, None, None
-        message_type, chunk, payload, hash = data[0], data[1:5], data[5:-40], data[-40:]
-        if hash != hashlib.sha1(data[:-40]).hexdigest().encode('utf-8'):
-            socket.sendto(UDP_Message.create_message_udp(RESEND, b''), ip)
-            return UDP_Message.receive_message_udp(socket)
-        return message_type, chunk, payload, ip
+        message_type, file, chunk, payload = data[0], data[1:5], data[5:]
+        return message_type, file, chunk, payload, ip
     
     def send_message (socket, message, ip, port):
         socket.sendto(message, (ip, port))

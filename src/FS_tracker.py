@@ -20,6 +20,7 @@ class fs_tracker():
 
     def handle_storage(self, socket_node, payload):
         files =payload.split(b' ')
+        print (files)
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
             chunks = arrayBytesToInt(files[i+1])

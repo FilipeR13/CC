@@ -1,10 +1,18 @@
 import hashlib
 
 def arrayIntToBytes(array):
-    return b','.join([chunk.to_bytes(4, byteorder='big') for chunk in array])
+    result = b''
+    for element in array:
+        result += element.to_bytes(4, byteorder='big')
+    print (f"Array: {result}")
+    return result
 
 def arrayBytesToInt(array):
-    return [int.from_bytes(chunk,'big') for chunk in array.split(b',')]
+    result = []
+    for i in range(0, len(array), 4):
+        value = int.from_bytes(array[i:i+4], byteorder='big')
+        result.append(value)    
+    return result
 
 def arrayBytesToString(array):
     return [chunk.decode('utf-8') for chunk in array.split(b',')]
@@ -14,6 +22,3 @@ def arrayStringToBytes(array):
 
 def arrayBytesToSha1(array):
     return [hashlib.sha1(chunk).hexdigest() for chunk in array]
-
-def arraySha1ToBytes(array):
-    return b','.join([chunk.encode('utf-8') for chunk in array])
