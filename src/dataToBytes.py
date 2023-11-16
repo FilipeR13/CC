@@ -4,7 +4,6 @@ def arrayIntToBytes(array):
     result = b''
     for element in array:
         result += element.to_bytes(4, byteorder='big')
-    print (f"Array: {result}")
     return result
 
 def arrayBytesToInt(array):
