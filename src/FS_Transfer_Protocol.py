@@ -2,6 +2,7 @@ import socket
 import hashlib
 from UDP_Protocol import * 
 from dataToBytes import * 
+from SafeMap import * 
 
 class Node_Transfer:
     def __init__ (self, port):
@@ -9,10 +10,10 @@ class Node_Transfer:
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.bind(('', port))
         # dict of files. Key = Name File, Value = {number Chunk : Chunk}
-        self.dict_files = {}
+        self.dict_files = SafeMap()
 
     def get_file(self, file, chunks, ip):
-        message = UDP_Message.create_message_udp(ORDER,file.encode('uft-8') + b' ' + arrayIntToBytes(range(0,len(chunks))))
+        message = UDP_Message.create_message_udp(ORDER,file.encode('utf-8') + b' ' + arrayIntToBytes(range(0,len(chunks))))
         # send order to get file
         UDP_Message.send_message(self.udp_socket, message, ip, self.port)
 
@@ -21,7 +22,7 @@ class Node_Transfer:
             while chunks:
                 number, chunk = UDP_Message.receive_chunk(self.udp_socket, chunks, ip, self.port)
                 chunks.remove(number)
-                self.dict_files[file][number] = chunk
+                self.dict_files.get(file)[number] = chunk
         elif message_type == None:
             return self.get_file(file, chunks, ip)    
 

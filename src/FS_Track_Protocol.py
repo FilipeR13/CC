@@ -45,19 +45,18 @@ class Node_Connection:
         return dict_files
 
     def handle_order(self, payload):
-        self.client_socket.send(TCP_Message.create_message(ORDER, payload[0].encode('utf-8')))
+        self.client_socket.send(TCP_Message.create_message(ORDER, payload.encode('utf-8')))
         message_type, nodes = TCP_Message.receive_message(self.client_socket)
         list = nodes.split(b' ')
         hashes, nodes = list[-1].split(b','), list[:-1]
+        print(nodes)
         if nodes == []:
             print(f"Arquivo {payload[0]} não encontrado")
             return None, None
         ips, chunks = [], []
-        pos = 0
         for i in range(0, len(nodes), 3):
-            ips[pos] = nodes[i].decode('utf-8')
-            chunks[pos] = arrayBytesToInt(nodes[i+1])
-            pos += 1
+            ips.append(nodes[i].decode('utf-8'))
+            chunks.append(arrayBytesToInt(nodes[i+1]))
         print (ips, chunks)
         return ips[0], chunks[0]
     def close_connection (self):

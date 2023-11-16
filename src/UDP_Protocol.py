@@ -8,7 +8,7 @@ DATA = 0x4
 
 class UDP_Message:
     def create_message_udp(flag, payload, chunk = 0):
-        message = flag + chunk.to_bytes(4, byteorder='big') + payload
+        message = bytearray([flag]) + chunk.to_bytes(4, byteorder='big') + payload
         return message + hashlib.sha1(message).hexdigest().encode('utf-8')
     
     def receive_message_udp(socket):
@@ -24,7 +24,7 @@ class UDP_Message:
     def send_message (socket, message, ip, port):
         socket.sendto(message, (ip, port))
         # socket.settimeout(0.5)
-        message_type, chunk, payload = UDP_Message.receive_message_udp(socket)
+        message_type, chunk, payload, _ = UDP_Message.receive_message_udp(socket)
         # ! verificar
         if message_type == None:
             chunk, payload = UDP_Message.send_message(socket, message, ip, port)
