@@ -13,14 +13,11 @@ class Node_Transfer:
         self.dict_files = SafeMap()
         # dict of chunks waiting to be received by the node. Key = Name File, Value = [number Chunk]
         self.waitingchunks = SafeMap()
-        # dict of ips. Key = ip, Value = file_name that the ip is sending
-        self.ips = SafeMap()
-
-
+        self.downloading_file = ""
 
     def get_file(self, file, chunks, ip):
         self.waitingchunks.put(file, chunks)
-        self.ips.put(ip, file)
+        self.downloading_file = file
         for chunk in chunks:
             message = UDP_Message.create_message_udp(ORDER,file.encode('utf-8'), chunk)
             # send order to get file

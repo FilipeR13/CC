@@ -14,10 +14,10 @@ def arrayBytesToInt(array):
     return result
 
 def arrayBytesToString(array):
-    return [chunk.decode('utf-8') for chunk in array.split(b',')]
+    return [chunk.decode('utf-8') for chunk in array.split(b'\0')]
 
 def arrayStringToBytes(array):
-    return b','.join([chunk.encode('utf-8') for chunk in array])
+    return b'\0'.join([chunk.encode('utf-8') for chunk in array])
 
 def arrayBytesToSha1(array):
     return [hashlib.sha1(chunk).hexdigest() for chunk in array]

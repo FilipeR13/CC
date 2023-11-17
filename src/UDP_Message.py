@@ -22,6 +22,6 @@ class UDP_Message:
         message_type, chunk, payload = UDP_Message.receive_message_udp(socket)
 
 
-    def send_chunk (socket, dict_chunks, chunks_to_send, ip, porta):
+#    def send_chunk (socket, dict_chunks, chunks_to_send, ip, porta):
         
 

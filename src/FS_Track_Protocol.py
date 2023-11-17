@@ -46,18 +46,22 @@ class Node_Connection:
 
     def handle_order(self, payload):
         self.client_socket.send(TCP_Message.create_message(ORDER, payload.encode('utf-8')))
-        message_type, nodes = TCP_Message.receive_message(self.client_socket)
+        _ , nodes = TCP_Message.receive_message(self.client_socket)
+
         list = nodes.split(b' ')
-        hashes, nodes = list[-1].split(b','), list[:-1]
-        print(nodes)
+        hashes, nodes = arrayBytesToString(list[-1]), list[:-1]
+        
         if nodes == []:
             print(f"Arquivo {payload} não encontrado")
             return None, None
+        
         ips, chunks = [], []
-        for i in range(0, len(nodes), 3):
+        for i in range(0, len(nodes), 2):
             ips.append(nodes[i].decode('utf-8'))
             chunks.append(arrayBytesToInt(nodes[i+1]))
-        print (ips, chunks)
+        
+        print (ips, chunks, hashes)
         return ips[0], chunks[0]
+    
     def close_connection (self):
         self.client_socket.close()

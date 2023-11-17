@@ -6,9 +6,9 @@ from dataToBytes import *
 from SafeMap import *
 class fs_tracker():
 
-    def __init__(self):
+    def __init__(self, port):
         self.name = socket.gethostname()
-        self.port = 9090
+        self.port = int(port)
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind(('', self.port))
         self.server_socket.listen(5)
@@ -20,7 +20,6 @@ class fs_tracker():
 
     def handle_storage(self, socket_node, payload):
         files =payload.split(b' ')
-        print (files)
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
             chunks = arrayBytesToInt(files[i+1])
@@ -30,10 +29,9 @@ class fs_tracker():
 
             dict_files = self.files.get(name)
             for chunk, hash in zip(chunks, hashes):
-                # ! verificar se quando faco get(name) se retorna o mesmo objeto
                 dict_files[chunk] = hash
             
-            self.nodes.get(socket_node.getpeername())[name] = chunks
+            self.nodes.get(socket_node.getpeername())[name] = dict_files.keys()
 
     def handle_order(self, socket_node, payload):
         result = []
@@ -42,16 +40,15 @@ class fs_tracker():
         for key, value in self.nodes.get_items():
             if key != node_who_asked:
                 if file in value:
-                    # result is a list of tuples (node, chunks)
-                    result.append((key, value.get(file)))
+                    # result is a list of tuples (ip, chunks)
+                    result.append((key[0], value.get(file)))
         self.handle_ship(socket_node, result, file)
 
     def handle_ship(self, socket_node, payload, file):
         nodes = []
         print (payload)
         for key, chunks in payload:
-            nodes.append(key[0].encode('utf-8'))
-            nodes.append(key[1].to_bytes(4, byteorder='big'))
+            nodes.append(key.encode('utf-8'))
             nodes.append(arrayIntToBytes(chunks))
         if nodes:
             nodes.append(arrayStringToBytes(self.files.get(file).values()))
@@ -98,5 +95,5 @@ class fs_tracker():
             sys.exit(0)
 
 if __name__ == "__main__":
-    tracker = fs_tracker()
+    tracker = fs_tracker(sys.argv[1])
     tracker.start_connections()
