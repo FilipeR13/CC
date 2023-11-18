@@ -1,6 +1,7 @@
 import socket
 from TCP_Message import *
 from dataToBytes import *
+from SafeMap import *
 import os
 import math
 import hashlib
@@ -15,10 +16,12 @@ class Node_Connection:
         print(f"Coneção FS Track Protocol com servidor {self.host} porta {port}")
 
     def send_name_files(self):
-        dict_files = {}
+        dict_files = SafeMap()
         files = [f for f in os.listdir(self.path) if os.path.isfile(self.path + f)]
         result = b""
         for file_name in files:
+            chunks_hash = {}
+
             # get hash of file in chunks
             sha1_hashes = []
             i = 0
@@ -27,10 +30,12 @@ class Node_Connection:
                     data = file.read(1024)
                     if not data:
                         break
-                    dict_files[i] = data
+                    chunks_hash[i] = data
                     i += 1
                     sha1_hash = hashlib.sha1(data)
                     sha1_hashes.append(sha1_hash.hexdigest())
+
+            dict_files.put(file_name, chunks_hash)
 
             size = os.path.getsize(self.path + file_name)
             number_of_chunks = math.ceil(size / PACKET_SIZE)
@@ -41,13 +46,14 @@ class Node_Connection:
 
         # Pack the list of encoded strings into a struct
         packet = TCP_Message.create_message(STORAGE, result[:-1])
+        print (packet)
         self.client_socket.send(packet)
         return dict_files
 
     def handle_order(self, payload):
         self.client_socket.send(TCP_Message.create_message(ORDER, payload.encode('utf-8')))
         _ , nodes = TCP_Message.receive_message(self.client_socket)
-
+        print (nodes)
         list = nodes.split(b' ')
         hashes, nodes = arrayBytesToString(list[-1]), list[:-1]
         
@@ -61,7 +67,7 @@ class Node_Connection:
             chunks.append(arrayBytesToInt(nodes[i+1]))
         
         print (ips, chunks, hashes)
-        return ips[0], chunks[0]
+        return ips[0], chunks[0], hashes
     
     def close_connection (self):
         self.client_socket.close()

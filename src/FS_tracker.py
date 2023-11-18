@@ -19,7 +19,9 @@ class fs_tracker():
         self.files = SafeMap()
 
     def handle_storage(self, socket_node, payload):
-        files =payload.split(b' ')
+        if not payload:
+            return
+        files = payload.split(b' ')
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
             chunks = arrayBytesToInt(files[i+1])
@@ -32,6 +34,8 @@ class fs_tracker():
                 dict_files[chunk] = hash
             
             self.nodes.get(socket_node.getpeername())[name] = dict_files.keys()
+
+        print (self.nodes)
 
     def handle_order(self, socket_node, payload):
         result = []
@@ -70,7 +74,7 @@ class fs_tracker():
 
         while True:
             message_type, payload = TCP_Message.receive_message(socket_node)
-            if not payload:
+            if not (payload or message_type):
                 break
             handle_flags[message_type](socket_node, payload)
 
