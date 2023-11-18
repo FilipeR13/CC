@@ -24,7 +24,7 @@ class Node_Connection:
 
             # get hash of file in chunks
             sha1_hashes = []
-            i = 0
+            i = 1
             with open(self.path + file_name, 'rb') as file:
                 while True:
                     data = file.read(1024)

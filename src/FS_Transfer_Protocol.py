@@ -5,8 +5,9 @@ from dataToBytes import *
 from SafeMap import * 
 
 class Node_Transfer:
-    def __init__ (self, port):
+    def __init__ (self, port, path):
         self.port = port
+        self.path = path
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.bind(('', port))
         # dict of files. Key = Name File, Value = {number Chunk : Chunk}
@@ -16,12 +17,14 @@ class Node_Transfer:
         self.downloading_file = ""
 
     def set_waitingchunks(self, hashes):
-        i = 0
+        i = 1
         for hash in hashes:
             self.waitingchunks[i] = hash
+            i+=1
 
     def set_downloading_file(self, file):
         self.downloading_file = file
+        self.dict_files.put(file, {})
 
     def get_file(self, chunks, ip):
         for chunk in chunks:
@@ -32,29 +35,32 @@ class Node_Transfer:
     def handle_udp (self):
         while True:
             message_type, chunk, payload, ip = UDP_Message.receive_message_udp(self.udp_socket)
+            n_chunk = int.from_bytes(chunk, byteorder='big')
+            data = payload.decode('utf-8')
             if message_type == ORDER:
-                    print (payload)
-                    print (chunk)
-                    print (ip)
-                    print(self.dict_files.get(self.downloading_file))
-                    UDP_Message.send_chunk(self.udp_socket, ip[0], self.port, chunk, self.dict_files.get(self.downloading_file)[chunk])
+                    if self.dict_files.exists(data):
+                        print(f"Sending chunk {n_chunk} of file {data}")
+                        UDP_Message.send_chunk(self.udp_socket, ip[0], ip[1], n_chunk, self.dict_files.get(data)[n_chunk])
+                    
             elif message_type == DATA:
-                if chunk in self.waitingchunks and hashlib.sha1(payload).hexdigest() == self.waitingchunks[chunk]:
-                    self.dict_files.get(self.downloading_file)[chunk] = payload.decode('utf-8')
-                    del self.waitingchunks[chunk]
+                print(f"Received chunk {n_chunk} of file {self.downloading_file}")
+                if n_chunk in self.waitingchunks and hashlib.sha1(payload).hexdigest() == self.waitingchunks[n_chunk]:
+                    self.dict_files.get(self.downloading_file)[n_chunk] = data
+                    del self.waitingchunks[n_chunk]
 
                 if not self.waitingchunks:
-                    self.dict_files.save_file(self.downloading_file)
+                    self.save_file(self.downloading_file)
                     self.waitingchunks = {}
                     self.downloading_file = ""
     
-    def save_file(self, file):
-        data = self.dict_files.get(file)
+    def save_file(self, file_name):
+        data = self.dict_files.get(file_name)
         sorted_data = sorted(data.items())
         try:
-            with open('example.txt', 'x') as file:
+            with open(self.path + file_name, 'w') as file:
                 for chunk in sorted_data:
                     file.write(chunk[1])
+                    print(f"Chunk {chunk[0]} with data {chunk[1]} written to file {file_name}")
 
             print("File created successfully!")
         except FileExistsError:
