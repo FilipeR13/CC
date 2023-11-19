@@ -50,6 +50,10 @@ class Node_Connection:
         self.client_socket.send(packet)
         return dict_files
 
+    def update_file(self, file_name, chunk, hash):
+        message = TCP_Message.create_message(STORAGE, file_name.encode('utf-8') + b" " + chunk.to_bytes(4, byteorder='big') + b" " + hash.encode('utf-8'))
+        self.client_socket.send(message)
+
     def handle_order(self, payload):
         self.client_socket.send(TCP_Message.create_message(ORDER, payload.encode('utf-8')))
         _ , nodes = TCP_Message.receive_message(self.client_socket)

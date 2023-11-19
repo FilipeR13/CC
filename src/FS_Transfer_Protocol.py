@@ -5,9 +5,10 @@ from dataToBytes import *
 from SafeMap import * 
 
 class Node_Transfer:
-    def __init__ (self, port, path):
+    def __init__ (self, port, path, tcp_connection):
         self.port = port
         self.path = path
+        self.tcp_connection = tcp_connection
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.bind(('', port))
         # dict of files. Key = Name File, Value = {number Chunk : Chunk}
@@ -45,6 +46,7 @@ class Node_Transfer:
             elif message_type == DATA:
                 print(f"Received chunk {n_chunk} of file {self.downloading_file}")
                 if n_chunk in self.waitingchunks and hashlib.sha1(payload).hexdigest() == self.waitingchunks[n_chunk]:
+                    self.tcp_connection.update_file(self.downloading_file, n_chunk, self.waitingchunks[n_chunk])
                     self.dict_files.get(self.downloading_file)[n_chunk] = data
                     del self.waitingchunks[n_chunk]
 
@@ -60,11 +62,8 @@ class Node_Transfer:
             with open(self.path + file_name, 'w') as file:
                 for chunk in sorted_data:
                     file.write(chunk[1])
-                    print(f"Chunk {chunk[0]} with data {chunk[1]} written to file {file_name}")
-
-            print("File created successfully!")
         except FileExistsError:
-            print(f"File {file} already exists.")
+            print(f"File {file_name} already exists.")
         except Exception as e:
             print(f"An error occurred: {e}")
 
