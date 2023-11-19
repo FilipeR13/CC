@@ -14,16 +14,16 @@ class UDP_Message:
         message_type, chunk, payload = data[0], data[1:5], data[5:]
         return message_type, chunk, payload, ip
     
-    def send_message (socket, message, ip, port):
-        socket.sendto(message, (ip, port))
+    def send_message (socket, message, ip):
+        socket.sendto(message, ip)
         # socket.settimeout(0.5)
     
     def receive_chunk(socket, ip, porta):
         message_type, chunk, payload = UDP_Message.receive_message_udp(socket)
 
 
-    def send_chunk (socket, ip, port, chunk, payload):
+    def send_chunk (socket, ip, chunk, payload):
         message = UDP_Message.create_message_udp(DATA, payload, chunk)
-        UDP_Message.send_message(socket, message, ip, port)
+        UDP_Message.send_message(socket, message, ip)
         
 

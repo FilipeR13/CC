@@ -20,8 +20,9 @@ class fs_tracker():
 
     def handle_storage(self, socket_node, payload):
         if not payload:
-            return
+            return 
         files = payload.split(b' ')
+        # print (files)
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
             chunks = arrayBytesToInt(files[i+1])
@@ -76,6 +77,7 @@ class fs_tracker():
             message_type, payload = TCP_Message.receive_message(socket_node)
             if not (payload or message_type):
                 break
+            # print (f"Message: {message_type} , {payload}")
             handle_flags[message_type](socket_node, payload)
 
         self.close_client(socket_node)

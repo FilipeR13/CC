@@ -3,6 +3,7 @@ import hashlib
 from UDP_Message import * 
 from dataToBytes import * 
 from SafeMap import * 
+from Timeout import * 
 
 class Node_Transfer:
     def __init__ (self, port, path, tcp_connection):
@@ -13,25 +14,33 @@ class Node_Transfer:
         self.udp_socket.bind(('', port))
         # dict of files. Key = Name File, Value = {number Chunk : Chunk}
         self.dict_files = SafeMap()
-        # dict of chunks waiting to be received by the node. Key = chunk, Value = hash | when received is removed | doesnt have to be a safe map because only one thread is accessing it
-        self.waitingchunks = {}
+        # dict of chunks waiting to be received by the node. Key = chunk, Value = hash | when received is removed
+        self.waitingchunks = SafeMap()
+        self.timeout = 5
+        self.threads_timeout = {}
         self.downloading_file = ""
 
     def set_waitingchunks(self, hashes):
         i = 1
         for hash in hashes:
-            self.waitingchunks[i] = hash
+            self.waitingchunks.put(i, hash)
             i+=1
 
     def set_downloading_file(self, file):
         self.downloading_file = file
         self.dict_files.put(file, {})
 
+    def get_chunk(self, chunk, ip):
+        message = UDP_Message.create_message_udp(ORDER,self.downloading_file.encode('utf-8'), chunk)
+        # send order to get file
+        UDP_Message.send_message(self.udp_socket, message, (ip, self.port))
+        timeout = TimeOutThread(self.timeout, self.get_chunk, chunk, ip)
+        self.threads_timeout[chunk] = timeout
+        timeout.start()
+
     def get_file(self, chunks, ip):
         for chunk in chunks:
-            message = UDP_Message.create_message_udp(ORDER,self.downloading_file.encode('utf-8'), chunk)
-            # send order to get file
-            UDP_Message.send_message(self.udp_socket, message, ip, self.port)
+            self.get_chunk(chunk, ip)
 
     def handle_udp (self):
         while True:
@@ -39,20 +48,29 @@ class Node_Transfer:
             n_chunk = int.from_bytes(chunk, byteorder='big')
             data = payload.decode('utf-8')
             if message_type == ORDER:
-                    if self.dict_files.exists(data):
-                        print(f"Sending chunk {n_chunk} of file {data}")
-                        UDP_Message.send_chunk(self.udp_socket, ip[0], ip[1], n_chunk, self.dict_files.get(data)[n_chunk])
+                if self.dict_files.exists(data):
+                    print(f"Sending chunk {n_chunk} of file {data}")
+                    UDP_Message.send_chunk(self.udp_socket, ip, n_chunk, self.dict_files.get(data)[n_chunk])
                     
             elif message_type == DATA:
-                print(f"Received chunk {n_chunk} of file {self.downloading_file}")
-                if n_chunk in self.waitingchunks and hashlib.sha1(payload).hexdigest() == self.waitingchunks[n_chunk]:
-                    self.tcp_connection.update_file(self.downloading_file, n_chunk, self.waitingchunks[n_chunk])
+                expected_hash = self.waitingchunks.get(n_chunk)
+                print(f"comparaHash {n_chunk}: {hashlib.sha1(payload).hexdigest() == expected_hash}")
+                if self.waitingchunks.exists(n_chunk) and hashlib.sha1(payload).hexdigest() == expected_hash:
+                    # stop timeout thread
+                    self.threads_timeout[n_chunk].stop_event.set()
+                    del self.threads_timeout[n_chunk]
+                    # update file
+                    self.tcp_connection.update_file(self.downloading_file, n_chunk, expected_hash)
+                    # save chunk
                     self.dict_files.get(self.downloading_file)[n_chunk] = data
-                    del self.waitingchunks[n_chunk]
+                    # remove chunk from waitingchunks
+                    self.waitingchunks.remove(n_chunk)
 
-                if not self.waitingchunks:
+                # if all chunks received reset waitingchunks and save file
+                if self.waitingchunks.isEmpty():
+                    print("All chunks received!")
                     self.save_file(self.downloading_file)
-                    self.waitingchunks = {}
+                    self.waitingchunks = SafeMap()
                     self.downloading_file = ""
     
     def save_file(self, file_name):
