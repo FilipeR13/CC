@@ -16,6 +16,6 @@ class TimeOutThread(threading.Thread):
         while time.time() - start_time < self.resend_interval:
             if self.stop_event.is_set():
                 return
-            time.sleep(0.5)
+            time.sleep(0.1)
         self.get_chunk(self.key, self.ip)
         return

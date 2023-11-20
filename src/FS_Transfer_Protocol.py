@@ -16,7 +16,7 @@ class Node_Transfer:
         self.dict_files = SafeMap()
         # dict of chunks waiting to be received by the node. Key = chunk, Value = hash | when received is removed
         self.waitingchunks = SafeMap()
-        self.timeout = 5
+        self.timeout = 0.5
         self.threads_timeout = {}
         self.downloading_file = ""
 
