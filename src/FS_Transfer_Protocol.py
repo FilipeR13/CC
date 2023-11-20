@@ -1,30 +1,90 @@
 import socket
 import hashlib
-from UDP_Protocol import * 
+from UDP_Message import * 
+from dataToBytes import * 
+from SafeMap import * 
+from Timeout import * 
 
 class Node_Transfer:
-    def __init__ (self, port):
+    def __init__ (self, port, path, tcp_connection):
         self.port = port
+        self.path = path
+        self.tcp_connection = tcp_connection
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.bind(('', port))
-        self.files_hashes = {}
-    
-    def get_file(self, file, chunks, ip):
-        message = UDP_Message.create_message_udp(ORDER,file.encode('uft-8') + b' ' + b','.join([chunk.to_bytes(4, byteorder='big') for chunk in range(0,len(chunks))]))
-        # send order to get file
-        UDP_Message.send_message(self.udp_socket, message, ip, self.port)
-        return UDP_Message.receive_chunks(self.udp_socket, chunks, ip, self.port)
+        # dict of files. Key = Name File, Value = {number Chunk : Chunk}
+        self.dict_files = SafeMap()
+        # dict of chunks waiting to be received by the node. Key = chunk, Value = hash | when received is removed
+        self.waitingchunks = SafeMap()
+        self.timeout = 0.5
+        self.threads_timeout = {}
+        self.downloading_file = ""
 
+    def set_waitingchunks(self, hashes):
+        i = 1
+        for hash in hashes:
+            self.waitingchunks.put(i, hash)
+            i+=1
+
+    def set_downloading_file(self, file):
+        self.downloading_file = file
+        self.dict_files.put(file, {})
+
+    def get_chunk(self, chunk, ip):
+        message = UDP_Message.create_message_udp(ORDER,self.downloading_file.encode('utf-8'), chunk)
+        # send order to get file
+        UDP_Message.send_message(self.udp_socket, message, (ip, self.port))
+        timeout = TimeOutThread(self.timeout, self.get_chunk, chunk, ip)
+        self.threads_timeout[chunk] = timeout
+        timeout.start()
+
+    def get_file(self, chunks, ip):
+        for chunk in chunks:
+            self.get_chunk(chunk, ip)
 
     def handle_udp (self):
         while True:
             message_type, chunk, payload, ip = UDP_Message.receive_message_udp(self.udp_socket)
+            n_chunk = int.from_bytes(chunk, byteorder='big')
+            data = payload.decode('utf-8')
             if message_type == ORDER:
-                file, chunks = payload.split(b' ')
-                self.files_hashes[file] = UDP_Message.send_chunks(self.udp_socket, file, [int.from_bytes(chunk,'big') for chunk in chunks.split(b',')] , ip, self.port)
+                if self.dict_files.exists(data):
+                    print(f"Sending chunk {n_chunk} of file {data}")
+                    UDP_Message.send_chunk(self.udp_socket, ip, n_chunk, self.dict_files.get(data)[n_chunk])
+                    
+            elif message_type == DATA:
+                expected_hash = self.waitingchunks.get(n_chunk)
+                print(f"comparaHash {n_chunk}: {hashlib.sha1(payload).hexdigest() == expected_hash}")
+                if self.waitingchunks.exists(n_chunk) and hashlib.sha1(payload).hexdigest() == expected_hash:
+                    # stop timeout thread
+                    self.threads_timeout[n_chunk].stop_event.set()
+                    del self.threads_timeout[n_chunk]
+                    # update file
+                    self.tcp_connection.update_file(self.downloading_file, n_chunk, expected_hash)
+                    # save chunk
+                    self.dict_files.get(self.downloading_file)[n_chunk] = data
+                    # remove chunk from waitingchunks
+                    self.waitingchunks.remove(n_chunk)
+
+                # if all chunks received reset waitingchunks and save file
+                if self.waitingchunks.isEmpty():
+                    print("All chunks received!")
+                    self.save_file(self.downloading_file)
+                    self.waitingchunks = SafeMap()
+                    self.downloading_file = ""
+    
+    def save_file(self, file_name):
+        data = self.dict_files.get(file_name)
+        sorted_data = sorted(data.items())
+        try:
+            with open(self.path + file_name, 'w') as file:
+                for chunk in sorted_data:
+                    file.write(chunk[1])
+        except FileExistsError:
+            print(f"File {file_name} already exists.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
     def close_connection (self):
         self.udp_socket.close()
-
-    

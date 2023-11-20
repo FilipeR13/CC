@@ -9,18 +9,13 @@ class TCP_Message:
         return bytearray([flag]) + len(payload).to_bytes(4, byteorder='big') + payload
     
     def receive_message(socket):
-        data = socket.recv(PACKET_SIZE)
+        data = socket.recv(5)
         if not data:
             return None, None
-        message_type, length, payload = data[0], data[1:5], data[5:]
+        message_type, length = data[0], data[1:5]
+        
         int_length = int.from_bytes(length, "big")
-        if int_length > PACKET_SIZE - 5:
-            while True:
-                data = socket.recv(PACKET_SIZE)
-                if not data:
-                    break
-                payload += data
-                if len(payload) == int_length:
-                    break
+        payload = socket.recv(int_length)
+
     #    print(f"Data recebida pela porta {socket.getpeername()[1]}: {length} || {message_type} || {payload}")
         return message_type, payload
