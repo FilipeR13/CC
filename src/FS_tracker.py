@@ -77,7 +77,7 @@ class fs_tracker():
             message_type, payload = TCP_Message.receive_message(socket_node)
             if not (payload or message_type):
                 break
-            # print (f"Message: {message_type} , {payload}")
+            print (f"Message: {message_type} , {payload}")
             handle_flags[message_type](socket_node, payload)
 
         self.close_client(socket_node)

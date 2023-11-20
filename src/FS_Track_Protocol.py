@@ -52,7 +52,7 @@ class Node_Connection:
 
     def update_file(self, file_name, chunk, hash):
         message = TCP_Message.create_message(STORAGE, file_name.encode('utf-8') + b" " + chunk.to_bytes(4, byteorder='big') + b" " + hash.encode('utf-8'))
-        # print (message)
+        print (message)
         self.client_socket.send(message)
 
     def handle_order(self, payload):
