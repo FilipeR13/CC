@@ -39,22 +39,26 @@ class fs_tracker():
         print (self.nodes)
 
     def handle_order(self, socket_node, payload):
-        result = []
+        # result is a dict (chunk,[ips])
+        result = {}
         file = payload.decode('utf-8')
         node_who_asked = socket_node.getpeername()
         for key, value in self.nodes.get_items():
-            if key != node_who_asked:
-                if file in value:
-                    # result is a list of tuples (ip, chunks)
-                    result.append((key[0], value.get(file)))
+            if key != node_who_asked and file in value:
+                chunks = value.get(file)
+                for chunk in chunks:
+                    if chunk not in result:
+                        result[chunk] = [key[0]]
+                    else:
+                        result[chunk].append(key[0])
         self.handle_ship(socket_node, result, file)
 
     def handle_ship(self, socket_node, payload, file):
         nodes = []
         print (payload)
-        for key, chunks in payload:
-            nodes.append(key.encode('utf-8'))
-            nodes.append(arrayIntToBytes(chunks))
+        for chunk, ips in payload.items():
+            nodes.append(chunk.to_bytes(4, byteorder='big'))
+            nodes.append(arrayStringToBytes(ips))
         if nodes:
             nodes.append(arrayStringToBytes(self.files.get(file).values()))
         socket_node.send(TCP_Message.create_message(SHIP, b' '.join(nodes)))

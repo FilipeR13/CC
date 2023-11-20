@@ -72,7 +72,7 @@ class Node_Connection:
             chunks.append(arrayBytesToInt(nodes[i+1]))
         
         print (ips, chunks, hashes)
-        return ips[0], chunks[0], hashes
+        return ips, chunks, hashes
     
     def close_connection (self):
         self.client_socket.close()
