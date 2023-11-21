@@ -13,7 +13,7 @@ class Node_Transfer:
         self.tcp_connection = tcp_connection
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.bind(('', port))
-        # dict of information of other nodes. Key = ip | Value = (TIME_ACC,MSS_SEND, MSS_RCV)
+        # dict of information of other nodes. Key = ip | Value = [TIME_ACC,MSS_SEND, MSS_RCV]
         self.nodes = {}
         self.max_rtt = 1000
         # dict of files. Key = Name File, Value = {number Chunk : Chunk}
@@ -37,10 +37,11 @@ class Node_Transfer:
     def get_chunk(self, socket, chunks, ip):
         for chunk in chunks:
             message = UDP_Message.create_message_udp(ORDER,self.downloading_file.encode('utf-8'), chunk)
+            self.nodes[ip][1] += 1
             # send order to get file
             UDP_Message.send_message(socket, message, (ip, self.port))
             timeout = TimeOutThread(self.timeout, self.get_chunk, chunk, ip)
-            self.threads_timeout.put(timeout, chunk)
+            self.threads_timeout.put(chunk, timeout)
             timeout.start()
         socket.close()
 
@@ -52,19 +53,29 @@ class Node_Transfer:
             thread_socket = threading.Thread(target=self.get_chunk, args=(new_socket, chunks, ip,))
             thread_socket.start()
 
+    def update_nodes(self, ip, time_stamp_env, timestamp_now):
+        rtt = timestamp_now - time_stamp_env
+        # update node
+        time_acc, mss_send, mss_rcv = self.nodes[ip]
+        self.nodes[ip] = [time_acc + rtt, mss_send, mss_rcv + 1]
+        # update max_rtt
+        self.max_rtt = max(self.max_rtt, rtt)
+
     def handle_udp (self):
         while True:
-            message_type, chunk, payload, ip = UDP_Message.receive_message_udp(self.udp_socket)
-            n_chunk = int.from_bytes(chunk, byteorder='big')
+            message_type, n_chunk, time_stamp_env, payload, ip = UDP_Message.receive_message_udp(self.udp_socket)
             data = payload.decode('utf-8')
             if message_type == ORDER:
                 if self.dict_files.exists(data):
                     print(f"Sending chunk {n_chunk} of file {data}")
-                    UDP_Message.send_chunk(self.udp_socket, ip, n_chunk, self.dict_files.get(data)[n_chunk])
+                    UDP_Message.send_chunk(self.udp_socket, ip[0], self.port, n_chunk, self.dict_files.get(data)[n_chunk], time_stamp_env)
                     
             elif message_type == DATA:
+                timestamp_now = round(time.time() * 1000) - 170060000000
+                self.update_nodes(ip[0], time_stamp_env, timestamp_now)
+
                 expected_hash = self.waitingchunks.get(n_chunk)
-                print(f"comparaHash {n_chunk}: {hashlib.sha1(payload).hexdigest() == expected_hash}")
+                # print(self.threads_timeout)
                 if self.waitingchunks.exists(n_chunk) and hashlib.sha1(payload).hexdigest() == expected_hash:
                     # stop timeout thread
                     self.threads_timeout.get(n_chunk).stop_event.set()

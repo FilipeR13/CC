@@ -20,5 +20,5 @@ class TimeOutThread(threading.Thread):
             time.sleep(0.1)
         new_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         new_socket.bind(('',0))
-        self.get_chunk(new_socket ,self.key, self.ip)
+        self.get_chunk(new_socket ,[self.key], self.ip)
         return

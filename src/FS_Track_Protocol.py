@@ -64,7 +64,7 @@ class Node_Connection:
         
         if nodes == []:
             print(f"Arquivo {payload} não encontrado")
-            return None, None, None
+            return None, None
         
         chunks_ips = {}
         for i in range(0, len(nodes), 2):

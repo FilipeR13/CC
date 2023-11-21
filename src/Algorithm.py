@@ -39,13 +39,13 @@ def search_chunks (chunks_ips, info_nodes, max_rtt):
         ip_unknown = check_for_unknown(ips, info_nodes)
         if ip_unknown:
             result[ip_unknown] = [chunk]
-            info_nodes[ip_unknown] = (0,0,0)
+            info_nodes[ip_unknown] = [0,0,0]
         else:
             ips_not_used = check_repeated(result, ips)
             if ips_not_used:
-                best_ip = best_ip(ips_not_used, info_nodes, max_rtt)
-                result[best_ip] = [chunk]
+                ip = best_ip(ips_not_used, info_nodes, max_rtt)
+                result[ip] = [chunk]
             else:
-                best_ip = best_ip(ips, info_nodes, max_rtt)
-                result[best_ip].append(chunk)
+                ip = best_ip(ips, info_nodes, max_rtt)
+                result[ip].append(chunk)
     return result 
