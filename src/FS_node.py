@@ -11,12 +11,11 @@ class fs_node():
         self.udp_connection = Node_Transfer(int(port), path, self.tcp_connection)
     
     def handle_order(self, payload):
-        ips, chunks, hashes = self.tcp_connection.handle_order(payload[0])
-        if ips:
+        chunks_ips, hashes = self.tcp_connection.handle_order(payload[0])
+        if chunks_ips:
             self.udp_connection.set_waitingchunks(hashes)
             self.udp_connection.set_downloading_file(payload[0])
-            ips_chunks = self.udp_connection.search_chunks(chunks,ips)
-            self.udp_connection.get_file(ips_chunks)
+            self.udp_connection.get_file(chunks_ips)
 
     def handle_quit(self, _):
         self.tcp_connection.close_connection()

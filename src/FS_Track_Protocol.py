@@ -66,13 +66,14 @@ class Node_Connection:
             print(f"Arquivo {payload} não encontrado")
             return None, None, None
         
-        ips, chunks = [], []
+        chunks_ips = {}
         for i in range(0, len(nodes), 2):
-            ips.append(nodes[i].decode('utf-8'))
-            chunks.append(arrayBytesToInt(nodes[i+1]))
+            chunk = int.from_bytes(nodes[i], byteorder='big')
+            ips = arrayBytesToString(nodes[i+1])
+            chunks_ips[chunk] = ips
         
-        print (ips, chunks, hashes)
-        return ips, chunks, hashes
+        print (chunks_ips, hashes)
+        return chunks_ips, hashes
     
     def close_connection (self):
         self.client_socket.close()

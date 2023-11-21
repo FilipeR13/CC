@@ -4,6 +4,7 @@ from UDP_Message import *
 from dataToBytes import * 
 from SafeMap import * 
 from Timeout import * 
+from Algorithm import * 
 
 class Node_Transfer:
     def __init__ (self, port, path, tcp_connection):
@@ -12,12 +13,15 @@ class Node_Transfer:
         self.tcp_connection = tcp_connection
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.bind(('', port))
+        # dict of information of other nodes. Key = ip | Value = (TIME_ACC,MSS_SEND, MSS_RCV)
+        self.nodes = {}
+        self.max_rtt = 1000
         # dict of files. Key = Name File, Value = {number Chunk : Chunk}
         self.dict_files = SafeMap()
         # dict of chunks waiting to be received by the node. Key = chunk, Value = hash | when received is removed
         self.waitingchunks = SafeMap()
         self.timeout = 0.5
-        self.threads_timeout = {}
+        self.threads_timeout = SafeMap()
         self.downloading_file = ""
 
     def set_waitingchunks(self, hashes):
@@ -30,17 +34,23 @@ class Node_Transfer:
         self.downloading_file = file
         self.dict_files.put(file, {})
 
-    def get_chunk(self, chunk, ip):
-        message = UDP_Message.create_message_udp(ORDER,self.downloading_file.encode('utf-8'), chunk)
-        # send order to get file
-        UDP_Message.send_message(self.udp_socket, message, (ip, self.port))
-        timeout = TimeOutThread(self.timeout, self.get_chunk, chunk, ip)
-        self.threads_timeout[chunk] = timeout
-        timeout.start()
-
-    def get_file(self, chunks, ip):
+    def get_chunk(self, socket, chunks, ip):
         for chunk in chunks:
-            self.get_chunk(chunk, ip)
+            message = UDP_Message.create_message_udp(ORDER,self.downloading_file.encode('utf-8'), chunk)
+            # send order to get file
+            UDP_Message.send_message(socket, message, (ip, self.port))
+            timeout = TimeOutThread(self.timeout, self.get_chunk, chunk, ip)
+            self.threads_timeout.put(timeout, chunk)
+            timeout.start()
+        socket.close()
+
+    def get_file(self, chunks_ips):
+        ips_chunks = search_chunks(chunks_ips, self.nodes, self.max_rtt)
+        for ip, chunks in ips_chunks.items():
+            new_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            new_socket.bind(('',0))
+            thread_socket = threading.Thread(target=self.get_chunk, args=(new_socket, chunks, ip,))
+            thread_socket.start()
 
     def handle_udp (self):
         while True:
@@ -57,8 +67,8 @@ class Node_Transfer:
                 print(f"comparaHash {n_chunk}: {hashlib.sha1(payload).hexdigest() == expected_hash}")
                 if self.waitingchunks.exists(n_chunk) and hashlib.sha1(payload).hexdigest() == expected_hash:
                     # stop timeout thread
-                    self.threads_timeout[n_chunk].stop_event.set()
-                    del self.threads_timeout[n_chunk]
+                    self.threads_timeout.get(n_chunk).stop_event.set()
+                    self.threads_timeout.remove(n_chunk)
                     # update file
                     self.tcp_connection.update_file(self.downloading_file, n_chunk, expected_hash)
                     # save chunk
