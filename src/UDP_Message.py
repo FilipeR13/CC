@@ -3,6 +3,7 @@ import time
 ORDER = 0x1
 DATA = 0x2
 
+PACKET_SIZE = 1024
 class UDP_Message:
     def create_message_udp(flag, payload,chunk = 0, timestamp= round(time.time() * 1000) - 1700600000000):  
         return bytearray([flag]) + chunk.to_bytes(4, byteorder='big') + timestamp.to_bytes(4, byteorder='big') + payload
@@ -20,5 +21,3 @@ class UDP_Message:
     def send_chunk (socket, ip, porta, chunk, payload, timestamp):
         message = UDP_Message.create_message_udp(DATA, payload, chunk, timestamp)
         UDP_Message.send_message(socket, message, (ip, porta))
-        
-

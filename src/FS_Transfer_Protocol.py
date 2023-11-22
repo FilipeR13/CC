@@ -1,5 +1,6 @@
 import socket
 import hashlib
+import os
 from UDP_Message import * 
 from dataToBytes import * 
 from SafeMap import * 
@@ -14,10 +15,9 @@ class Node_Transfer:
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.bind(('', port))
         # dict of information of other nodes. Key = ip | Value = [TIME_ACC,MSS_SEND, MSS_RCV]
+        self.file = None
         self.nodes = {}
         self.max_rtt = 1000
-        # dict of files. Key = Name File, Value = {number Chunk : Chunk}
-        self.dict_files = SafeMap()
         # dict of chunks waiting to be received by the node. Key = chunk, Value = hash | when received is removed
         self.waitingchunks = SafeMap()
         self.timeout = 0.5
@@ -32,7 +32,7 @@ class Node_Transfer:
 
     def set_downloading_file(self, file):
         self.downloading_file = file
-        self.dict_files.put(file, {})
+        self.file = open(self.path + file, 'w')
 
     def get_chunk(self, socket, chunks, ip):
         for chunk in chunks:
@@ -66,9 +66,12 @@ class Node_Transfer:
             message_type, n_chunk, time_stamp_env, payload, ip = UDP_Message.receive_message_udp(self.udp_socket)
             data = payload.decode('utf-8')
             if message_type == ORDER:
-                if self.dict_files.exists(data):
+                if os.path.isfile(self.path + data):
                     print(f"Sending chunk {n_chunk} of file {data}")
-                    UDP_Message.send_chunk(self.udp_socket, ip[0], self.port, n_chunk, self.dict_files.get(data)[n_chunk], time_stamp_env)
+                    with open(self.path + data, 'rb') as file:
+                        file.seek((n_chunk-1)*PACKET_SIZE)
+                        content = file.read(PACKET_SIZE)
+                    UDP_Message.send_chunk(self.udp_socket, ip[0], self.port, n_chunk, content, time_stamp_env)
                     
             elif message_type == DATA:
                 timestamp_now = round(time.time() * 1000) - 170060000000
@@ -83,29 +86,18 @@ class Node_Transfer:
                     # update file
                     self.tcp_connection.update_file(self.downloading_file, n_chunk, expected_hash)
                     # save chunk
-                    self.dict_files.get(self.downloading_file)[n_chunk] = data
+                    self.file.seek((n_chunk-1)*PACKET_SIZE)
+                    self.file.write(data)
                     # remove chunk from waitingchunks
                     self.waitingchunks.remove(n_chunk)
 
                 # if all chunks received reset waitingchunks and save file
                 if self.waitingchunks.isEmpty():
                     print("All chunks received!")
-                    self.save_file(self.downloading_file)
+                    self.file.close()
+                    self.file = None
                     self.waitingchunks = SafeMap()
                     self.downloading_file = ""
-    
-    def save_file(self, file_name):
-        data = self.dict_files.get(file_name)
-        sorted_data = sorted(data.items())
-        try:
-            with open(self.path + file_name, 'w') as file:
-                for chunk in sorted_data:
-                    file.write(chunk[1])
-        except FileExistsError:
-            print(f"File {file_name} already exists.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
 
     def close_connection (self):
         self.udp_socket.close()

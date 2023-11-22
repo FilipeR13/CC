@@ -1,5 +1,6 @@
 import socket
 from TCP_Message import *
+from UDP_Message import PACKET_SIZE
 from dataToBytes import *
 from SafeMap import *
 import os
@@ -16,7 +17,6 @@ class Node_Connection:
         print(f"Coneção FS Track Protocol com servidor {self.host} porta {port}")
 
     def send_name_files(self):
-        dict_files = SafeMap()
         files = [f for f in os.listdir(self.path) if os.path.isfile(self.path + f)]
         result = b""
         for file_name in files:
@@ -35,8 +35,6 @@ class Node_Connection:
                     sha1_hash = hashlib.sha1(data)
                     sha1_hashes.append(sha1_hash.hexdigest())
 
-            dict_files.put(file_name, chunks_hash)
-
             size = os.path.getsize(self.path + file_name)
             number_of_chunks = math.ceil(size / PACKET_SIZE)
 
@@ -48,7 +46,6 @@ class Node_Connection:
         packet = TCP_Message.create_message(STORAGE, result[:-1])
         print (packet)
         self.client_socket.send(packet)
-        return dict_files
 
     def update_file(self, file_name, chunk, hash):
         message = TCP_Message.create_message(STORAGE, file_name.encode('utf-8') + b" " + chunk.to_bytes(4, byteorder='big') + b" " + hash.encode('utf-8'))

@@ -40,8 +40,7 @@ def main():
 
     node = fs_node(sys.argv[1],sys.argv[2],sys.argv[3])
 
-    dict_files = node.tcp_connection.send_name_files()
-    node.udp_connection.dict_files = dict_files
+    node.tcp_connection.send_name_files()
     udpprotocol = threading.Thread(target=node.udp_connection.handle_udp)
     udpprotocol.daemon = True  # Mark as a daemon thread
     udpprotocol.start()
