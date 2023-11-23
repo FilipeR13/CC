@@ -44,18 +44,15 @@ class Node_Connection:
 
         # Pack the list of encoded strings into a struct
         packet = TCP_Message.create_message(STORAGE, result[:-1])
-        print (packet)
         self.client_socket.send(packet)
 
     def update_file(self, file_name, chunk, hash):
         message = TCP_Message.create_message(STORAGE, file_name.encode('utf-8') + b" " + chunk.to_bytes(4, byteorder='big') + b" " + hash.encode('utf-8'))
-        print (message)
         self.client_socket.send(message)
 
     def handle_order(self, payload):
         self.client_socket.send(TCP_Message.create_message(ORDER, payload.encode('utf-8')))
         _ , nodes = TCP_Message.receive_message(self.client_socket)
-        print (nodes)
         list = nodes.split(b' ')
         hashes, nodes = arrayBytesToString(list[-1]), list[:-1]
         

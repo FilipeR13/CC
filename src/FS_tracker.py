@@ -22,7 +22,6 @@ class fs_tracker():
         if not payload:
             return 
         files = payload.split(b' ')
-        # print (files)
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
             chunks = arrayBytesToInt(files[i+1])
@@ -35,8 +34,6 @@ class fs_tracker():
                 dict_files[chunk] = hash
             
             self.nodes.get(socket_node.getpeername())[name] = dict_files.keys()
-
-        print (self.nodes)
 
     def handle_order(self, socket_node, payload):
         # result is a dict (chunk,[ips])
@@ -55,7 +52,6 @@ class fs_tracker():
 
     def handle_ship(self, socket_node, payload, file):
         nodes = []
-        print (payload)
         for chunk, ips in payload.items():
             nodes.append(chunk.to_bytes(4, byteorder='big'))
             nodes.append(arrayStringToBytes(ips))
@@ -81,7 +77,6 @@ class fs_tracker():
             message_type, payload = TCP_Message.receive_message(socket_node)
             if not (payload or message_type):
                 break
-            print (f"Message: {message_type} , {payload}")
             handle_flags[message_type](socket_node, payload)
 
         self.close_client(socket_node)

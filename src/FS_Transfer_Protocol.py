@@ -39,14 +39,15 @@ class Node_Transfer:
             message = UDP_Message.create_message_udp(ORDER,self.downloading_file.encode('utf-8'), chunk)
             self.nodes[ip][1] += 1
             # send order to get file
-            UDP_Message.send_message(socket, message, (ip, self.port))
             timeout = TimeOutThread(self.timeout, self.get_chunk, chunk, ip)
             self.threads_timeout.put(chunk, timeout)
             timeout.start()
+            UDP_Message.send_message(socket, message, (ip, self.port))
         socket.close()
 
     def get_file(self, chunks_ips):
         ips_chunks = search_chunks(chunks_ips, self.nodes, self.max_rtt)
+        print(ips_chunks)
         for ip, chunks in ips_chunks.items():
             new_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             new_socket.bind(('',0))
@@ -78,7 +79,6 @@ class Node_Transfer:
                 self.update_nodes(ip[0], time_stamp_env, timestamp_now)
 
                 expected_hash = self.waitingchunks.get(n_chunk)
-                # print(self.threads_timeout)
                 if self.waitingchunks.exists(n_chunk) and hashlib.sha1(payload).hexdigest() == expected_hash:
                     # stop timeout thread
                     self.threads_timeout.get(n_chunk).stop_event.set()
