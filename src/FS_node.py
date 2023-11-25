@@ -11,11 +11,11 @@ class fs_node():
         self.udp_connection = Node_Transfer(int(port), path, self.tcp_connection)
     
     def handle_order(self, payload):
-        ip, chunks, hashes = self.tcp_connection.handle_order(payload[0])
-        if ip:
+        chunks_ips, hashes = self.tcp_connection.handle_order(payload[0])
+        if chunks_ips:
             self.udp_connection.set_waitingchunks(hashes)
             self.udp_connection.set_downloading_file(payload[0])
-            self.udp_connection.get_file(chunks,ip)
+            self.udp_connection.get_file(chunks_ips)
 
     def handle_quit(self, _):
         self.tcp_connection.close_connection()
@@ -40,8 +40,7 @@ def main():
 
     node = fs_node(sys.argv[1],sys.argv[2],sys.argv[3])
 
-    dict_files = node.tcp_connection.send_name_files()
-    node.udp_connection.dict_files = dict_files
+    node.tcp_connection.send_name_files()
     udpprotocol = threading.Thread(target=node.udp_connection.handle_udp)
     udpprotocol.daemon = True  # Mark as a daemon thread
     udpprotocol.start()

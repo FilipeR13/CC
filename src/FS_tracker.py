@@ -22,7 +22,6 @@ class fs_tracker():
         if not payload:
             return 
         files = payload.split(b' ')
-        # print (files)
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
             chunks = arrayBytesToInt(files[i+1])
@@ -36,25 +35,26 @@ class fs_tracker():
             
             self.nodes.get(socket_node.getpeername())[name] = dict_files.keys()
 
-        print (self.nodes)
-
     def handle_order(self, socket_node, payload):
-        result = []
+        # result is a dict (chunk,[ips])
+        result = {}
         file = payload.decode('utf-8')
         node_who_asked = socket_node.getpeername()
         for key, value in self.nodes.get_items():
-            if key != node_who_asked:
-                if file in value:
-                    # result is a list of tuples (ip, chunks)
-                    result.append((key[0], value.get(file)))
+            if key != node_who_asked and file in value:
+                chunks = value.get(file)
+                for chunk in chunks:
+                    if chunk not in result:
+                        result[chunk] = [key[0]]
+                    else:
+                        result[chunk].append(key[0])
         self.handle_ship(socket_node, result, file)
 
     def handle_ship(self, socket_node, payload, file):
         nodes = []
-        print (payload)
-        for key, chunks in payload:
-            nodes.append(key.encode('utf-8'))
-            nodes.append(arrayIntToBytes(chunks))
+        for chunk, ips in payload.items():
+            nodes.append(chunk.to_bytes(4, byteorder='big'))
+            nodes.append(arrayStringToBytes(ips))
         if nodes:
             nodes.append(arrayStringToBytes(self.files.get(file).values()))
         socket_node.send(TCP_Message.create_message(SHIP, b' '.join(nodes)))
@@ -77,7 +77,6 @@ class fs_tracker():
             message_type, payload = TCP_Message.receive_message(socket_node)
             if not (payload or message_type):
                 break
-            print (f"Message: {message_type} , {payload}")
             handle_flags[message_type](socket_node, payload)
 
         self.close_client(socket_node)
