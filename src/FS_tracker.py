@@ -4,6 +4,7 @@ import sys
 from TCP_Message import *
 from dataToBytes import *
 from SafeMap import *
+from Bitfield import *
 class fs_tracker():
 
     def __init__(self, port):
@@ -24,7 +25,7 @@ class fs_tracker():
         files = payload.split(b' ')
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
-            chunks = arrayBytesToInt(files[i+1])
+            chunks = get_bitfield_chunks(int.from_bytes(files[i+1], byteorder='big'))
             hashes = arrayBytesToString(files[i+2])
             if not self.files.exists(name):
                 self.files.put(name,{})

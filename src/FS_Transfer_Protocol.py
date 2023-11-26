@@ -25,7 +25,7 @@ class Node_Transfer:
         self.downloading_file = ""
 
     def set_waitingchunks(self, hashes):
-        i = 1
+        i = 0
         for hash in hashes:
             self.waitingchunks.put(i, hash)
             i+=1
@@ -70,7 +70,7 @@ class Node_Transfer:
                 if os.path.isfile(self.path + data):
                     print(f"Sending chunk {n_chunk} of file {data}")
                     with open(self.path + data, 'rb') as file:
-                        file.seek((n_chunk-1)*PACKET_SIZE)
+                        file.seek(n_chunk * PACKET_SIZE)
                         content = file.read(PACKET_SIZE)
                     UDP_Message.send_chunk(self.udp_socket, ip[0], self.port, n_chunk, content, time_stamp_env)
                     
@@ -86,7 +86,7 @@ class Node_Transfer:
                     # update file
                     self.tcp_connection.update_file(self.downloading_file, n_chunk, expected_hash)
                     # save chunk
-                    self.file.seek((n_chunk-1)*PACKET_SIZE)
+                    self.file.seek(n_chunk *PACKET_SIZE)
                     self.file.write(data)
                     # remove chunk from waitingchunks
                     self.waitingchunks.remove(n_chunk)

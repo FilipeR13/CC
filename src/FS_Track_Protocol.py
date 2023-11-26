@@ -3,6 +3,7 @@ from TCP_Message import *
 from UDP_Message import PACKET_SIZE
 from dataToBytes import *
 from SafeMap import *
+from Bitfield import *
 import os
 import math
 import hashlib
@@ -24,7 +25,7 @@ class Node_Connection:
 
             # get hash of file in chunks
             sha1_hashes = []
-            i = 1
+            i = 0
             with open(self.path + file_name, 'rb') as file:
                 while True:
                     data = file.read(1024)
@@ -37,9 +38,9 @@ class Node_Connection:
 
             size = os.path.getsize(self.path + file_name)
             number_of_chunks = math.ceil(size / PACKET_SIZE)
-
+            bitfield = 2 ** number_of_chunks - 1
             result += file_name.encode('utf-8') + b" " # name of file
-            result += arrayIntToBytes(list(range(1,number_of_chunks+1))) + b" " # array of chunks
+            result += bitfield_toBytes(bitfield) + b" " # bitfield of chunks
             result += arrayStringToBytes(sha1_hashes) + b" " # array of hashes of chunks
 
         # Pack the list of encoded strings into a struct
@@ -47,7 +48,7 @@ class Node_Connection:
         self.client_socket.send(packet)
 
     def update_file(self, file_name, chunk, hash):
-        message = TCP_Message.create_message(STORAGE, file_name.encode('utf-8') + b" " + chunk.to_bytes(4, byteorder='big') + b" " + hash.encode('utf-8'))
+        message = TCP_Message.create_message(STORAGE, file_name.encode('utf-8') + b" " + bitfield_toBytes(calculate_bitfield_chunk(0, chunk)) + b" " + hash.encode('utf-8'))
         self.client_socket.send(message)
 
     def handle_order(self, payload):

@@ -21,3 +21,7 @@ def arrayStringToBytes(array):
 
 def arrayBytesToSha1(array):
     return [hashlib.sha1(chunk).hexdigest() for chunk in array]
+
+def bitfield_toBytes (bitfield):
+    length_bytes = (bitfield.bit_length() + 7) // 8 
+    return bitfield.to_bytes(length_bytes, byteorder='big')
