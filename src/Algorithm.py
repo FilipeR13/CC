@@ -1,5 +1,5 @@
-weight_RTT = 0.6
-weight_PacketLoss = 0.4
+weight_RTT = 0.5
+weight_PacketLoss = 0.5
 
 # calculate load of an ip. Bigger means slower
 def calculate_load (info_ip, max_rtt):
@@ -33,10 +33,8 @@ def best_chunk_distribution (result, ips, info_nodes, max_rtt):
         else:
             ratio = ratio_bettewen_nodes(load, current_load)
 
-            ratio_chunk_fst_ip = length_current_ip + 1 / length_ip
-            ratio_chunk_snd_ip = length_ip + 1 / length_current_ip
-            # if the ration between length of adding a chunk to the ip is more closer to the ratio between the loads, send the chunk to it
-            if abs (ratio_chunk_fst_ip - ratio) > abs (ratio_chunk_snd_ip - ratio):
+            comparator = (length_ip + 1) * ratio
+            if comparator < length_current_ip:
                 current_ip = ip
                 current_load = load
     return current_ip

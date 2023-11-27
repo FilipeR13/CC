@@ -1,7 +1,8 @@
 # Define message flags
 STORAGE = 0x01
-ORDER = 0x02
-SHIP = 0x03
+UPDATE = 0x02
+ORDER = 0x03
+SHIP = 0x04
 
 class TCP_Message:
     def create_message(flag,payload):
@@ -16,5 +17,4 @@ class TCP_Message:
         int_length = int.from_bytes(length, "big")
         payload = socket.recv(int_length)
 
-    #    print(f"Data recebida pela porta {socket.getpeername()[1]}: {length} || {message_type} || {payload}")
         return message_type, payload

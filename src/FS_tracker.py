@@ -4,7 +4,6 @@ import sys
 from TCP_Message import *
 from dataToBytes import *
 from SafeMap import *
-from Bitfield import *
 class fs_tracker():
 
     def __init__(self, port):
@@ -25,7 +24,7 @@ class fs_tracker():
         files = payload.split(b' ')
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
-            chunks = get_bitfield_chunks(int.from_bytes(files[i+1], byteorder='big'))
+            chunks = list(range(0,int.from_bytes(files[i+1], byteorder='big')))
             hashes = arrayBytesToString(files[i+2])
             if not self.files.exists(name):
                 self.files.put(name,{})
@@ -35,6 +34,19 @@ class fs_tracker():
                 dict_files[chunk] = hash
             
             self.nodes.get(socket_node.getpeername())[name] = dict_files.keys()
+            print (self.nodes.get(socket_node.getpeername()))
+
+    def handle_update(self, socket_node, payload):
+        if not payload:
+            return
+        file_name, chunks = payload.split(b' ')
+        file_name = file_name.decode('utf-8')
+        chunk = int.from_bytes(chunks, byteorder='big')
+        files = self.nodes.get(socket_node.getpeername())
+        if file_name in files:
+            files[file_name].append(chunk)
+        else:
+            files[file_name] = [chunk]
 
     def handle_order(self, socket_node, payload):
         # result is a dict (chunk,[ips])
@@ -71,6 +83,7 @@ class fs_tracker():
 
         handle_flags = {
             STORAGE: self.handle_storage,
+            UPDATE: self.handle_update,
             ORDER: self.handle_order,
         }
 
