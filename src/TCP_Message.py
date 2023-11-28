@@ -13,8 +13,12 @@ class TCP_Message:
         if not data:
             return None, None
         message_type, length = data[0], data[1:5]
-        
-        int_length = int.from_bytes(length, "big")
-        payload = socket.recv(int_length)
+        int_length = int.from_bytes(length, byteorder="big")
+        payload = b''
+        length = 0
+        while int_length > length:
+            chunk = socket.recv(1024)
+            length += len(chunk)
+            payload += chunk
 
         return message_type, payload

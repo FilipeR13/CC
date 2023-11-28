@@ -79,7 +79,7 @@ class Node_Transfer:
                 self.update_nodes(ip[0], time_stamp_env, timestamp_now)
 
                 expected_hash = self.waitingchunks.get(n_chunk)
-                if self.waitingchunks.exists(n_chunk) and hashlib.sha1(payload).digest() == expected_hash:
+                if self.waitingchunks.exists(n_chunk) and hashlib.sha1(payload).hexdigest() == expected_hash:
                     # stop timeout thread
                     self.threads_timeout.get(n_chunk).stop_event.set()
                     self.threads_timeout.remove(n_chunk)
