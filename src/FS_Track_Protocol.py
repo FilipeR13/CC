@@ -20,28 +20,25 @@ class Node_Connection:
         files = [f for f in os.listdir(self.path) if os.path.isfile(self.path + f)]
         result = b""
         for file_name in files:
-            chunks_hash = {}
 
             # get hash of file in chunks
             sha1_hashes = []
-            i = 0
             with open(self.path + file_name, 'rb') as file:
                 while True:
                     data = file.read(1024)
                     if not data:
                         break
-                    chunks_hash[i] = data
-                    i += 1
                     sha1_hash = hashlib.sha1(data)
-                    sha1_hashes.append(sha1_hash.hexdigest())
+                    sha1_hashes.append(sha1_hash.digest())
 
             size = os.path.getsize(self.path + file_name)
             number_of_chunks = math.ceil(size / PACKET_SIZE)
-            result += file_name.encode('utf-8') + b" " # name of file
-            result += number_of_chunks.to_bytes(4, byteorder='big') + b" " # number of chunks
-            result += arrayStringToBytes(sha1_hashes) + b" " # array of hashes of chunks
 
+            result += file_name.encode('utf-8') + b'\t' # name of file
+            result += number_of_chunks.to_bytes(4, byteorder='big') + b'\t' # number of chunks
+            result += b''.join(sha1_hashes) + b'\t' # array of hashes of chunks
         # Pack the list of encoded strings into a struct
+        print (result)
         packet = TCP_Message.create_message(STORAGE, result[:-1])
         self.client_socket.send(packet)
 
@@ -52,21 +49,27 @@ class Node_Connection:
     def handle_order(self, payload):
         self.client_socket.send(TCP_Message.create_message(ORDER, payload.encode('utf-8')))
         _ , nodes = TCP_Message.receive_message(self.client_socket)
-        list = nodes.split(b' ')
-        hashes, nodes = arrayBytesToString(list[-1]), list[:-1]
-        
+        list = nodes.split(b'\t')
+        hashes, nodes = list[-1], list[:-1]
+        for e in list:
+            print (e)
         if nodes == []:
             print(f"Arquivo {payload} não encontrado")
             return None, None
+
+        hashes_list = []
+        for i in range(0, len(hashes), 20):
+            hashes_list.append(hashes[i:i+20])
         
         chunks_ips = {}
+        print (len(nodes))
         for i in range(0, len(nodes), 2):
             chunk = int.from_bytes(nodes[i], byteorder='big')
             ips = arrayBytesToString(nodes[i+1])
             chunks_ips[chunk] = ips
         
         print (chunks_ips, hashes)
-        return chunks_ips, hashes
+        return chunks_ips, hashes_list
     
     def close_connection (self):
         self.client_socket.close()

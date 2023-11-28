@@ -21,16 +21,24 @@ class fs_tracker():
     def handle_storage(self, socket_node, payload):
         if not payload:
             return 
-        files = payload.split(b' ')
+        files = payload.split(b'\t')
+        print(len(files))
+        print(files)
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
             chunks = list(range(0,int.from_bytes(files[i+1], byteorder='big')))
-            hashes = arrayBytesToString(files[i+2])
+            
+            hashes = files[i+2]
+            hashes_list = []
+            while (len(hashes) > 0):
+                hashes_list.append(hashes[:20])
+                hashes = hashes[20:]
+
             if not self.files.exists(name):
                 self.files.put(name,{})
 
             dict_files = self.files.get(name)
-            for chunk, hash in zip(chunks, hashes):
+            for chunk, hash in zip(chunks, hashes_list):
                 dict_files[chunk] = hash
             
             self.nodes.get(socket_node.getpeername())[name] = dict_files.keys()
@@ -65,12 +73,14 @@ class fs_tracker():
 
     def handle_ship(self, socket_node, payload, file):
         nodes = []
+        print(payload)
         for chunk, ips in payload.items():
             nodes.append(chunk.to_bytes(4, byteorder='big'))
             nodes.append(arrayStringToBytes(ips))
         if nodes:
-            nodes.append(arrayStringToBytes(self.files.get(file).values()))
-        socket_node.send(TCP_Message.create_message(SHIP, b' '.join(nodes)))
+            nodes.append(b''.join(self.files.get(file).values()))
+        print(nodes)
+        socket_node.send(TCP_Message.create_message(SHIP, b'\t'.join(nodes)))
 
     def close_client(self, socket_node):
         key = socket_node.getpeername()
@@ -91,6 +101,7 @@ class fs_tracker():
             message_type, payload = TCP_Message.receive_message(socket_node)
             if not (payload or message_type):
                 break
+            print (f"Recebido {message_type} e {payload} de {socket_node.getpeername()}")
             handle_flags[message_type](socket_node, payload)
 
         self.close_client(socket_node)
