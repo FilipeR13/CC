@@ -13,7 +13,7 @@ class Node_Connection:
         self.port = port
         self.path = path
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.connect((self.host,self.port))
+        self.client_socket.connect((socket.gethostbyname(host),self.port))
         print(f"Conexão FS Track Protocol com servidor {self.host} porta {port}")
 
     def send_name_files(self):

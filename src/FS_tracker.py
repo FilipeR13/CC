@@ -7,10 +7,10 @@ from SafeMap import *
 class fs_tracker():
 
     def __init__(self, port):
-        self.name = socket.gethostname()
+        self.name = socket.gethostname() + ".cc"
         self.port = int(port)
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.bind(('', self.port))
+        self.server_socket.bind((socket.gethostbyname(self.name), self.port))
         self.server_socket.listen(5)
         self.node_threads = SafeMap()
         # dict of nodes and files: Key = (host,port); Value = {name file : [chunks]}
