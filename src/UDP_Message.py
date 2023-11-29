@@ -20,4 +20,5 @@ class UDP_Message:
 
     def send_chunk (socket, ip, porta, chunk, payload, timestamp):
         message = UDP_Message.create_message_udp(DATA, payload, chunk, timestamp)
+        print(f"Enviando chunk {chunk}")
         UDP_Message.send_message(socket, message, (ip, porta))

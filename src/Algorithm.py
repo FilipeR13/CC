@@ -20,7 +20,6 @@ def best_chunk_distribution (result, ips, info_nodes, max_rtt):
     for ip in ips[1:]:
         info_ip = info_nodes.get(ip)
         load = calculate_load(info_ip, max_rtt)
-        print (f"load: {load} |||current_load: {current_load}")
         length_current_ip = len(result.get(current_ip))
         length_ip = len(result.get(ip))
         # if ip is slower than current and have more chunks, ignore it

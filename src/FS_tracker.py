@@ -21,27 +21,33 @@ class fs_tracker():
     def handle_storage(self, socket_node, payload):
         if not payload:
             return 
-        files = payload.split(b' ')
+        files = payload.split(b'\t')
         for i in range(0, len(files), 3):
             name = files[i].decode('utf-8')
             chunks = list(range(0,int.from_bytes(files[i+1], byteorder='big')))
-            hashes = arrayBytesToString(files[i+2])
+            
+            hashes = files[i+2]
+            hashes_list = []
+            while (len(hashes) > 0):
+                hashes_list.append(hashes[:40])
+                hashes = hashes[40:]
+
             if not self.files.exists(name):
                 self.files.put(name,{})
 
             dict_files = self.files.get(name)
-            for chunk, hash in zip(chunks, hashes):
+            for chunk, hash in zip(chunks, hashes_list):
                 dict_files[chunk] = hash
             
             self.nodes.get(socket_node.getpeername())[name] = dict_files.keys()
-            print (self.nodes.get(socket_node.getpeername()))
 
     def handle_update(self, socket_node, payload):
         if not payload:
             return
-        file_name, chunks = payload.split(b' ')
-        file_name = file_name.decode('utf-8')
+        file_name, chunks = payload[4:], payload[:4]
         chunk = int.from_bytes(chunks, byteorder='big')
+        print (payload, chunk)
+        file_name = file_name.decode('utf-8')
         files = self.nodes.get(socket_node.getpeername())
         if file_name in files:
             files[file_name].append(chunk)
@@ -64,13 +70,16 @@ class fs_tracker():
         self.handle_ship(socket_node, result, file)
 
     def handle_ship(self, socket_node, payload, file):
+        if not payload:
+            socket_node.send(TCP_Message.create_message(SHIP,b''))
+            return
+        
         nodes = []
         for chunk, ips in payload.items():
-            nodes.append(chunk.to_bytes(4, byteorder='big'))
-            nodes.append(arrayStringToBytes(ips))
+            nodes.append(chunk.to_bytes(4, byteorder='big') + arrayStringToBytes(ips))
         if nodes:
-            nodes.append(arrayStringToBytes(self.files.get(file).values()))
-        socket_node.send(TCP_Message.create_message(SHIP, b' '.join(nodes)))
+            nodes.append(b''.join(self.files.get(file).values()))
+        socket_node.send(TCP_Message.create_message(SHIP, (len(nodes) - 1).to_bytes(4, byteorder="big") + b' '.join(nodes)))
 
     def close_client(self, socket_node):
         key = socket_node.getpeername()
