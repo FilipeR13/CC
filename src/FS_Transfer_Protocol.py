@@ -13,8 +13,10 @@ class Node_Transfer:
         self.path = path
         self.tcp_connection = tcp_connection
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udp_socket.bind(('', port))
-        # dict of information of other nodes. Key = ip | Value = [TIME_ACC,MSS_SEND, MSS_RCV]
+        name_node = socket.gethostname() + ".cc"
+        self.ip = socket.gethostbyname(name_node)
+        self.udp_socket.bind((self.ip, port))
+        # dict of information of other nodes. Key = nomeNodo | Value = [TIME_ACC,MSS_SEND, MSS_RCV]
         self.nodes = {}
         self.max_rtt = 1000
         # dict of chunks waiting to be received by the node. Key = chunk, Value = hash | when received is removed
@@ -36,30 +38,31 @@ class Node_Transfer:
             f.truncate()
             f.close()
 
-    def get_chunk(self, socket, chunks, ip):
+    def get_chunk(self, socket_to_send, chunks, name):
         for chunk in chunks:
             message = UDP_Message.create_message_udp(ORDER,self.downloading_file.encode('utf-8'), chunk)
-            self.nodes[ip][1] += 1
+            self.nodes[name][1] += 1
+            ip_to_send = socket.gethostbyname(name + ".cc")
             # send order to get file
-            timeout = TimeOutThread(self.timeout, self.get_chunk, chunk, ip)
+            timeout = TimeOutThread(self.timeout, self.get_chunk, chunk, name)
             self.threads_timeout.put(chunk, timeout)
             timeout.start()
-            UDP_Message.send_message(socket, message, (ip, self.port))
-        socket.close()
+            UDP_Message.send_message(socket_to_send, message, (ip_to_send, self.port))
+        socket_to_send.close()
 
-    def get_file(self, chunks_ips):
-        ips_chunks = search_chunks(chunks_ips, self.nodes, self.max_rtt)
-        for ip, chunks in ips_chunks.items():
+    def get_file(self, chunks_names):
+        names_chunks = search_chunks(chunks_names, self.nodes, self.max_rtt)
+        for name, chunks in names_chunks.items():
             new_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            new_socket.bind(('',0))
-            thread_socket = threading.Thread(target=self.get_chunk, args=(new_socket, chunks, ip,))
+            new_socket.bind((self.ip,0))
+            thread_socket = threading.Thread(target=self.get_chunk, args=(new_socket, chunks, name,))
             thread_socket.start()
 
-    def update_nodes(self, ip, time_stamp_env, timestamp_now):
+    def update_nodes(self, name_node, time_stamp_env, timestamp_now):
         rtt = timestamp_now - time_stamp_env
         # update node
-        time_acc, mss_send, mss_rcv = self.nodes[ip]
-        self.nodes[ip] = [time_acc + rtt, mss_send, mss_rcv + 1]
+        time_acc, mss_send, mss_rcv = self.nodes[name_node]
+        self.nodes[name_node] = [time_acc + rtt, mss_send, mss_rcv + 1]
         # update max_rtt
         self.max_rtt = max(self.max_rtt, rtt)
 
@@ -79,7 +82,8 @@ class Node_Transfer:
                     
             elif message_type == DATA:
                 timestamp_now = round(time.time() * 1000) - 170000000000
-                self.update_nodes(ip[0], time_stamp_env, timestamp_now)
+                name_node = socket.gethostbyaddr(ip[0])[0][:-20]
+                self.update_nodes(name_node, time_stamp_env, timestamp_now)
 
                 expected_hash = self.waitingchunks.get(n_chunk)
                 if self.waitingchunks.exists(n_chunk) and hashlib.sha1(payload).hexdigest() == expected_hash:
