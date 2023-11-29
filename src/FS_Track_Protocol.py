@@ -14,7 +14,7 @@ class Node_Connection:
         self.path = path
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((self.host,self.port))
-        print(f"Coneção FS Track Protocol com servidor {self.host} porta {port}")
+        print(f"Conexão FS Track Protocol com servidor {self.host} porta {port}")
 
     def send_name_files(self):
         files = [f for f in os.listdir(self.path) if os.path.isfile(self.path + f)]
@@ -42,7 +42,7 @@ class Node_Connection:
         self.client_socket.send(packet)
 
     def update_file(self, file_name, chunk, hash):
-        message = TCP_Message.create_message(UPDATE, file_name.encode('utf-8') + b" " + chunk.to_bytes(4, byteorder= 'big'))
+        message = TCP_Message.create_message(UPDATE,chunk.to_bytes(4, byteorder= 'big') + file_name.encode('utf-8'))
         self.client_socket.send(message)
 
     def handle_order(self, payload):
@@ -65,7 +65,8 @@ class Node_Connection:
         
         chunks_ips = {}
         i = 0
-        while i < number_chunks:
+        chunks_read = 0 
+        while chunks_read < number_chunks:
             chunk = int.from_bytes(information[i:i + 4], byteorder='big')
             j = i + 4
             while j < len(information) and information[j] != 32:  # 32 is the ASCII code for space
@@ -73,7 +74,7 @@ class Node_Connection:
             ips = arrayBytesToString(information[i + 4: j])
             chunks_ips[chunk] = ips
             i = j + 1
-            
+            chunks_read += 1
         return chunks_ips, hashes_list
     
     def close_connection (self):

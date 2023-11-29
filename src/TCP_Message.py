@@ -17,7 +17,7 @@ class TCP_Message:
         payload = b''
         length = 0
         while int_length > length:
-            chunk = socket.recv(1024)
+            chunk = socket.recv(min(int_length - length, 1024))
             length += len(chunk)
             payload += chunk
 

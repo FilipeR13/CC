@@ -15,7 +15,6 @@ class Node_Transfer:
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.bind(('', port))
         # dict of information of other nodes. Key = ip | Value = [TIME_ACC,MSS_SEND, MSS_RCV]
-        self.file = None
         self.nodes = {}
         self.max_rtt = 1000
         # dict of chunks waiting to be received by the node. Key = chunk, Value = hash | when received is removed
@@ -32,7 +31,10 @@ class Node_Transfer:
 
     def set_downloading_file(self, file):
         self.downloading_file = file
-        self.file = open(self.path + file, 'w')
+        with open(self.path + file, 'w+b') as f:
+            f.seek(0)
+            f.truncate()
+            f.close()
 
     def get_chunk(self, socket, chunks, ip):
         for chunk in chunks:
@@ -47,7 +49,6 @@ class Node_Transfer:
 
     def get_file(self, chunks_ips):
         ips_chunks = search_chunks(chunks_ips, self.nodes, self.max_rtt)
-        print(ips_chunks)
         for ip, chunks in ips_chunks.items():
             new_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             new_socket.bind(('',0))
@@ -65,17 +66,19 @@ class Node_Transfer:
     def handle_udp (self):
         while True:
             message_type, n_chunk, time_stamp_env, payload, ip = UDP_Message.receive_message_udp(self.udp_socket)
-            data = payload.decode('utf-8')
             if message_type == ORDER:
+                data = payload.decode('utf-8')
                 if os.path.isfile(self.path + data):
-                    print(f"Sending chunk {n_chunk} of file {data}")
-                    with open(self.path + data, 'rb') as file:
+                    with open(self.path + data, 'r+b') as file:
                         file.seek(n_chunk * PACKET_SIZE)
                         content = file.read(PACKET_SIZE)
+                        file.flush()
+                        file.close()
+                    
                     UDP_Message.send_chunk(self.udp_socket, ip[0], self.port, n_chunk, content, time_stamp_env)
                     
             elif message_type == DATA:
-                timestamp_now = round(time.time() * 1000) - 170060000000
+                timestamp_now = round(time.time() * 1000) - 170000000000
                 self.update_nodes(ip[0], time_stamp_env, timestamp_now)
 
                 expected_hash = self.waitingchunks.get(n_chunk)
@@ -86,16 +89,17 @@ class Node_Transfer:
                     # update file
                     self.tcp_connection.update_file(self.downloading_file, n_chunk, expected_hash)
                     # save chunk
-                    self.file.seek(n_chunk *PACKET_SIZE)
-                    self.file.write(data)
+                    with open(self.path + self.downloading_file, 'r+b') as f:    
+                        f.seek(n_chunk * PACKET_SIZE)
+                        f.write(payload)
+                        f.flush()
+                        f.close()
                     # remove chunk from waitingchunks
                     self.waitingchunks.remove(n_chunk)
 
                 # if all chunks received reset waitingchunks and save file
                 if self.waitingchunks.isEmpty():
                     print("All chunks received!")
-                    self.file.close()
-                    self.file = None
                     self.waitingchunks = SafeMap()
                     self.downloading_file = ""
 

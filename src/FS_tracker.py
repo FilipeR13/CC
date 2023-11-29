@@ -44,9 +44,10 @@ class fs_tracker():
     def handle_update(self, socket_node, payload):
         if not payload:
             return
-        file_name, chunks = payload.split(b' ')
-        file_name = file_name.decode('utf-8')
+        file_name, chunks = payload[4:], payload[:4]
         chunk = int.from_bytes(chunks, byteorder='big')
+        print (payload, chunk)
+        file_name = file_name.decode('utf-8')
         files = self.nodes.get(socket_node.getpeername())
         if file_name in files:
             files[file_name].append(chunk)
