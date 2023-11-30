@@ -11,6 +11,9 @@ class fs_node():
         self.udp_connection = Node_Transfer(int(port), path, self.tcp_connection)
     
     def handle_order(self, payload):
+        if payload[0] in os.listdir(self.tcp_connection.path):
+            print("Arquivo já existe")
+            return
         chunks_ips, hashes = self.tcp_connection.handle_order(payload[0])
         if chunks_ips:
             self.udp_connection.set_waitingchunks(hashes)

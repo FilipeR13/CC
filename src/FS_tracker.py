@@ -72,7 +72,7 @@ class fs_tracker():
         if not payload:
             socket_node.send(TCP_Message.create_message(SHIP,b''))
             return
-        
+        print (payload)
         nodes = []
         for chunk, names in payload.items():
             nodes.append(chunk.to_bytes(4, byteorder='big') + arrayStringToBytes(names))
@@ -80,10 +80,9 @@ class fs_tracker():
             nodes.append(b''.join(self.files.get(file).values()))
         socket_node.send(TCP_Message.create_message(SHIP, (len(nodes) - 1).to_bytes(4, byteorder="big") + b' '.join(nodes)))
 
-    def close_client(self, socket_node):
-        key = socket_node.getpeername()
-        print(f"Node {key} desconectado")
-        self.nodes.remove(key)
+    def close_client(self, socket_node, name_node):
+        print(f"Node {name_node} desconectado")
+        self.nodes.remove(name_node)
         socket_node.close()
 
     def handle_client(self, socket_node, name_node):
@@ -100,7 +99,7 @@ class fs_tracker():
                 break
             handle_flags[message_type](socket_node, name_node, payload)
 
-        self.close_client(socket_node)
+        self.close_client(socket_node, name_node)
 
     def start_connections(self):
         print(f"Servidor ativo em {self.server_socket.getsockname()[0]} porta {self.port}")
