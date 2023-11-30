@@ -12,7 +12,7 @@ class fs_tracker():
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((socket.gethostbyname(self.name), self.port))
         self.server_socket.listen(5)
-        # dict of nodes and files: Key = nomeNode; Value = {name file : [chunks]}
+        # dict of nodes and files: Key = name file; Value = {node : [chunks]}
         self.nodes = SafeMap()
         # dict of files: Key = name file : {chunks : hash}
         self.files = SafeMap()
@@ -22,7 +22,7 @@ class fs_tracker():
             return 
         files = payload.split(b'\t')
         for i in range(0, len(files), 3):
-            name = files[i].decode('utf-8')
+            file = files[i].decode('utf-8')
             chunks = list(range(0,int.from_bytes(files[i+1], byteorder='big')))
             
             hashes = files[i+2]
@@ -31,41 +31,43 @@ class fs_tracker():
                 hashes_list.append(hashes[:40])
                 hashes = hashes[40:]
 
-            if not self.files.exists(name):
-                self.files.put(name,{})
+            if not self.files.exists(file):
+                self.files.put(file,{})
 
-            dict_files = self.files.get(name)
+            if not self.nodes.exists(file):
+                self.nodes.put(file,SafeMap())
+
+            dict_files = self.files.get(file)
             for chunk, hash in zip(chunks, hashes_list):
                 dict_files[chunk] = hash
             
-            self.nodes.get(name_node)[name] = dict_files.keys()
+            self.nodes.get(file).put(name_node,chunks)
 
     def handle_update(self, _, name_node, payload):
         if not payload:
             return
         file_name, chunks = payload[4:], payload[:4]
         chunk = int.from_bytes(chunks, byteorder='big')
-        print (payload, chunk)
         file_name = file_name.decode('utf-8')
-        files = self.nodes.get(name_node)
-        if file_name in files:
-            files[file_name].append(chunk)
+        nodes = self.nodes.get(file_name)
+        if nodes.exists(name_node):
+            nodes.get(name_node).append(chunk)
         else:
-            files[file_name] = [chunk]
+            nodes.put(name_node, [chunk])
 
     def handle_order(self, socket_node, name_node, payload):
-        # result is a dict (chunk,[ips])
+        # result is a dict (chunk,[names])
         result = {}
         file = payload.decode('utf-8')
-        node_who_asked = name_node
-        for key, value in self.nodes.get_items():
-            if key != node_who_asked and file in value:
-                chunks = value.get(file)
+
+        nodes = self.nodes.get(file)
+        if nodes:
+            for node, chunks in nodes.get_items():
                 for chunk in chunks:
                     if chunk not in result:
-                        result[chunk] = [key]
+                        result[chunk] = [node]
                     else:
-                        result[chunk].append(key)
+                        result[chunk].append(node)
         self.handle_ship(socket_node, result, file)
 
     def handle_ship(self, socket_node, payload, file):
@@ -82,7 +84,12 @@ class fs_tracker():
 
     def close_client(self, socket_node, name_node):
         print(f"Node {name_node} desconectado")
-        self.nodes.remove(name_node)
+        for file_name,nodes in self.nodes.get_items():
+            if nodes.exists(name_node):
+                nodes.remove(name_node)
+            if nodes.isEmpty():
+                self.nodes.remove(file_name)
+                self.files.remove(file_name)
         socket_node.close()
 
     def handle_client(self, socket_node, name_node):
@@ -110,7 +117,6 @@ class fs_tracker():
                 print(f"O Node {name_node} conectou-se ao servidor")
 
                 thread_node = threading.Thread(target=self.handle_client, args=(socket_node,name_node,))    
-                self.nodes.put(name_node, {})
 
                 thread_node.start()
                 
