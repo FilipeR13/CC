@@ -25,12 +25,14 @@ class Node_Transfer:
         self.threads_timeout = SafeMap()
         self.downloading_file = ""
 
+    # set_waitingchunks: set the chunks that the node is waiting to receive
     def set_waitingchunks(self, hashes):
         i = 0
         for hash in hashes:
             self.waitingchunks.put(i, hash)
             i+=1
 
+    # set_downloading_file: set the file that the node is downloading
     def set_downloading_file(self, file):
         self.downloading_file = file
         with open(self.path + file, 'w+b') as f:
@@ -38,12 +40,15 @@ class Node_Transfer:
             f.truncate()
             f.close()
 
+    # get_chunk: send order to get a chunk of a file
     def get_chunk(self, socket_to_send, chunks, name):
         for chunk in chunks:
+            # send order to get chunk
             message = UDP_Message.create_message_udp(ORDER,self.downloading_file.encode('utf-8'), chunk)
+            # increment MSS_SEND
             self.nodes[name][1] += 1
             ip_to_send = socket.gethostbyname(name + ".cc")
-            # send order to get file
+            # start timeout thread
             timeout = TimeOutThread(self.timeout, self.get_chunk, chunk, name)
             self.threads_timeout.put(chunk, timeout)
             timeout.start()
@@ -51,8 +56,10 @@ class Node_Transfer:
         socket_to_send.close()
 
     def get_file(self, chunks_names):
+        # run algorithm to get the nodes that will send the chunks
         names_chunks = search_chunks(chunks_names, self.nodes, self.max_rtt)
         for name, chunks in names_chunks.items():
+            # create socket by ip to send chunks
             new_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             new_socket.bind((self.ip,0))
             thread_socket = threading.Thread(target=self.get_chunk, args=(new_socket, chunks, name,))
@@ -67,9 +74,11 @@ class Node_Transfer:
         self.max_rtt = max(self.max_rtt, rtt)
 
     def handle_udp (self):
+        # receive messages
         while True:
             message_type, n_chunk, time_stamp_env, payload, ip = UDP_Message.receive_message_udp(self.udp_socket)
             if message_type == ORDER:
+                # open file requested, read and send chunk to the node
                 data = payload.decode('utf-8')
                 if os.path.isfile(self.path + data):
                     with open(self.path + data, 'r+b') as file:
@@ -81,10 +90,11 @@ class Node_Transfer:
                     UDP_Message.send_chunk(self.udp_socket, ip[0], self.port, n_chunk, content, time_stamp_env)
                     
             elif message_type == DATA:
+                # calculate timestamp_now to update RTT 
                 timestamp_now = round(time.time() * 1000) - 170000000000
                 name_node = socket.gethostbyaddr(ip[0])[0][:-20]
                 self.update_nodes(name_node, time_stamp_env, timestamp_now)
-
+                # check if the chunk is the expected and does not have errors
                 expected_hash = self.waitingchunks.get(n_chunk)
                 if self.waitingchunks.exists(n_chunk) and hashlib.sha1(payload).hexdigest() == expected_hash:
                     # stop timeout thread
@@ -107,5 +117,6 @@ class Node_Transfer:
                     self.waitingchunks = SafeMap()
                     self.downloading_file = ""
 
+    # close_connection: close the connection
     def close_connection (self):
         self.udp_socket.close()
