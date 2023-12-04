@@ -48,6 +48,7 @@ class fs_tracker():
             
             # add the chunks to the nodes dict
             self.nodes.get(file).put(name_node,chunks)
+            print (f"Armazenado {file} do node {name_node} com sucesso")
 
     # handle_update: handle the update of chunks of a file that a node has in the tracker
     def handle_update(self, _, name_node, payload):
@@ -62,6 +63,7 @@ class fs_tracker():
             nodes.get(name_node).append(chunk)
         else:
             nodes.put(name_node, [chunk])
+        print (f"Node {name_node} atualizou o chunk {chunk} do arquivo {file_name}")
 
     # handle_order: handle the order of a file that a node wants to download
     def handle_order(self, socket_node, _, payload):
@@ -86,7 +88,6 @@ class fs_tracker():
         if not payload:
             socket_node.send(TCP_Message.create_message(SHIP,b''))
             return
-        print (payload)
         nodes = []
         # transform the dict into a list of bytes that has the format: chunk + names and, in the end, the hashes ordered by chunk
         for chunk, names in payload.items():

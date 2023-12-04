@@ -1,3 +1,5 @@
+from DNS import *
+
 WEIGHT_RTT = 0.5
 WEIGHT_PACKETLOSS = 0.5
 
@@ -109,7 +111,7 @@ def search_chunks (chunks_ips, info_nodes, max_rtt):
         ip_unknown = check_for_unknown(ips, info_nodes)
         if ip_unknown:
             result[ip_unknown] = [chunk]
-            info_nodes[ip_unknown] = [0,0,0]
+            info_nodes[ip_unknown] = [0,0,0, getIpByHostname(ip_unknown)]
         # if there is no ip unknown, choose the best ip to send the chunk
         else:
             ip = choose_ip(result, ips, info_nodes, max_rtt)

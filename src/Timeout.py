@@ -4,12 +4,13 @@ import socket
 
 class TimeOutThread(threading.Thread):
     # TimeOutThread: thread that waits for a timeout to resend a chunk. Extends threading.Thread
-    def __init__(self, resend_interval, get_chunk, key, ip):
+    def __init__(self, resend_interval, get_chunk, key, name, ip):
         super(TimeOutThread, self).__init__()
         self.resend_interval = resend_interval
         self.get_chunk = get_chunk
         self.key = key
         self.ip = ip
+        self.name = name
         self.stop_event = threading.Event()
 
     def run(self):
@@ -22,5 +23,5 @@ class TimeOutThread(threading.Thread):
         # timeout reached, resend chunk
         new_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         new_socket.bind(('',0))
-        self.get_chunk(new_socket ,[self.key], self.ip)
+        self.get_chunk(new_socket ,[self.key], self.name, self.ip)
         return
