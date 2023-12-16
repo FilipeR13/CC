@@ -6,15 +6,15 @@ DATA = 0x2
 PACKET_SIZE = 1024
 class UDP_Message:
     # create_message_udp: create a message to send
-    def create_message_udp(flag, payload,chunk = 0, timestamp= round(time.time() * 1000) - 1700600000000):  
-        return bytearray([flag]) + chunk.to_bytes(4, byteorder='big') + timestamp.to_bytes(4, byteorder='big') + payload
+    def create_message_udp(flag, payload,chunk = 0, timestamp= round(time.time() * 1000)):  
+        return bytearray([flag]) + chunk.to_bytes(4, byteorder='big') + timestamp.to_bytes(8, byteorder='big') + payload
     
     # receive_message_udp: receive a message and return the flag, the chunk, the timestamp and the payload
     def receive_message_udp(socket):
-        data, ip = socket.recvfrom(1033) # 1024 bytes do chunk + 9 bytes do cabeçalho
+        data, ip = socket.recvfrom(1037) # 1024 bytes do chunk + 13 bytes do cabeçalho
         if not data:
             return None, None, None, None, None
-        message_type, chunk, timestamp, payload = data[0], data[1:5], data[5:9], data[9:]
+        message_type, chunk, timestamp, payload = data[0], data[1:5], data[5:13], data[13:]
         return message_type, int.from_bytes(chunk, byteorder='big'), int.from_bytes(timestamp,byteorder='big'), payload, ip
     
     # send_message: send a message

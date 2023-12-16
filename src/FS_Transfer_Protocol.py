@@ -94,7 +94,7 @@ class Node_Transfer:
                     
             elif message_type == DATA:
                 # calculate timestamp_now to update RTT 
-                timestamp_now = round(time.time() * 1000) - 170000000000
+                timestamp_now = round(time.time() * 1000)
                 # get expected hash and name of node
                 chunk_info = self.waitingchunks.get(n_chunk)
 
