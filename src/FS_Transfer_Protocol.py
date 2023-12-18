@@ -113,7 +113,7 @@ class Node_Transfer:
                         self.threads_timeout.get(n_chunk).stop_event.set()
                         self.threads_timeout.remove(n_chunk)
                         # update file
-                        self.tcp_connection.update_file(self.downloading_file, n_chunk, expected_hash)
+                        self.tcp_connection.update_file(self.downloading_file, n_chunk)
                         # save chunk
                         with open(self.path + self.downloading_file, 'r+b') as f:    
                             f.seek(n_chunk * PACKET_SIZE)

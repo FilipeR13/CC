@@ -47,7 +47,7 @@ class Node_Connection:
         self.client_socket.send(packet)
 
     # update_file: send the update of a chunk of a file to tracker
-    def update_file(self, file_name, chunk, hash):
+    def update_file(self, file_name, chunk):
         message = TCP_Message.create_message(UPDATE,chunk.to_bytes(4, byteorder= 'big') + file_name.encode('utf-8'))
         self.client_socket.send(message)
 

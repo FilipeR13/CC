@@ -1,5 +1,3 @@
-import hashlib
-
 # dataToBytes: transform the data from bytes to string
 def arrayBytesToString(array):
     return [chunk.decode('utf-8') for chunk in array.split(b'\0')]
